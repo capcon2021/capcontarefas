@@ -52,14 +52,7 @@ body { font-family: 'Nunito', sans-serif; background: #f8f9fb; color: var(--gray
 .form-group input {
   width: 100%; padding: 12px 16px; border: 2px solid var(--border); border-radius: 10px;
   font-size: 14px; font-family: 'Nunito', sans-serif; transition: border-color .2s;
-  outline: none; color: #374151; background-color: #ffffff;
-}
-.form-group input:-webkit-autofill,
-.form-group input:-webkit-autofill:hover,
-.form-group input:-webkit-autofill:focus {
-  -webkit-text-fill-color: #374151 !important;
-  -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
-  background-color: #ffffff !important;
+  outline: none;
 }
 .form-group input:focus { border-color: var(--orange); }
 .btn-login {
@@ -919,35 +912,20 @@ const ALL_SCREENS = [
   { id: 'dashboard-tasks', label: 'Dashboard Tarefas',     section: 'Projetos'   },
 ];
 
-// Versão dos usuários padrão — altere este número para forçar reset
-const USERS_VERSION = 3;
-
-const USERS_DEFAULT = {
-  admin:      { pass: 'cap2025',  name: 'Administrador', isAdmin: true,  screens: ALL_SCREENS.map(s=>s.id) },
-  gestor:     { pass: 'cap123',   name: 'Gestor',         isAdmin: false, screens: ALL_SCREENS.map(s=>s.id) },
-  financeiro: { pass: 'fin123',   name: 'Financeiro',     isAdmin: false, screens: ['dashboard-fin','mensalidades','enviados','recebidos'] },
-};
-
-// Limpa dados antigos e carrega defaults
+// Carregar usuários do localStorage (ou usar padrão)
 function loadUsers() {
   try {
-    const vSaved = parseInt(localStorage.getItem('cap_users_version') || '0');
-    if (vSaved < USERS_VERSION) {
-      localStorage.removeItem('cap_users');
-      localStorage.removeItem('cap_login');
-      localStorage.setItem('cap_users_version', String(USERS_VERSION));
-    } else {
-      const saved = localStorage.getItem('cap_users');
-      if (saved) return JSON.parse(saved);
-    }
-  } catch(e) {
-    localStorage.clear();
-  }
-  return JSON.parse(JSON.stringify(USERS_DEFAULT));
+    const saved = localStorage.getItem('cap_users');
+    if (saved) return JSON.parse(saved);
+  } catch(e) {}
+  return {
+    admin:      { pass: 'S,kyar@_2025', name: 'Administrador', isAdmin: true,  screens: ALL_SCREENS.map(s=>s.id) },
+    gestor:     { pass: 'cap123',       name: 'Gestor',         isAdmin: false, screens: ALL_SCREENS.map(s=>s.id) },
+    financeiro: { pass: 'fin123',       name: 'Financeiro',     isAdmin: false, screens: ['dashboard-fin','mensalidades','enviados','recebidos'] },
+  };
 }
 function saveUsers(users) {
   localStorage.setItem('cap_users', JSON.stringify(users));
-  localStorage.setItem('cap_users_version', String(USERS_VERSION));
 }
 let USERS = loadUsers();
 
@@ -988,41 +966,32 @@ function mapReuniao(r) { return { id: r.id, titulo: r.titulo||'', data: r.data||
 
 // Estado local (espelho em memória do banco)
 // ============================================================
-// PERSISTÊNCIA — Supabase (multi-dispositivo)
+// PERSISTÊNCIA LOCAL (localStorage) — dados salvos no navegador
 // ============================================================
+const DB_KEY = 'cap_gestao_db';
 
-// Recalcula nextId a partir dos dados carregados
-function recalcNextId() {
-  nextId.cli  = clientes.length     ? Math.max(...clientes.map(x=>x.id))     + 1 : 1;
-  nextId.mens = mensalidades.length ? Math.max(...mensalidades.map(x=>x.id)) + 1 : 1;
-  nextId.tar  = tarefas.length      ? Math.max(...tarefas.map(x=>x.id))      + 1 : 1;
-  nextReuId   = reunioes.length     ? Math.max(...reunioes.map(x=>x.id))     + 1 : 1;
+function salvarDB() {
+  try {
+    localStorage.setItem(DB_KEY, JSON.stringify({
+      clientes, mensalidades, tarefas, reunioes,
+      nextId, nextReuId: nextReuId
+    }));
+  } catch(e) { console.warn('Erro ao salvar:', e); }
 }
 
-// salvarDB agora é no-op — cada operação já grava direto no Supabase
-function salvarDB() { /* gravação feita por sbInsert/sbUpdate/sbDelete */ }
-
-async function carregarDB() {
-  showLoader('🔄 Carregando dados...');
+function carregarDB() {
   try {
-    const [rc, rm, rt, rr] = await Promise.all([
-      sbGet('clientes'),
-      sbGet('mensalidades'),
-      sbGet('tarefas'),
-      sbGet('reunioes'),
-    ]);
-    clientes     = (rc||[]).map(mapCliente);
-    mensalidades = (rm||[]).map(mapMens);
-    tarefas      = (rt||[]).map(mapTarefa);
-    reunioes     = (rr||[]).map(mapReuniao);
-    recalcNextId();
-    hideLoader();
+    const raw = localStorage.getItem(DB_KEY);
+    if (!raw) return false;
+    const db = JSON.parse(raw);
+    clientes    = db.clientes    || [];
+    mensalidades = db.mensalidades || [];
+    tarefas     = (db.tarefas    || []).map(t => ({ ...t, timerRunning: false }));
+    reunioes    = db.reunioes    || [];
+    nextId      = db.nextId      || { cli: 1, mens: 1, tar: 1 };
+    nextReuId   = db.nextReuId   || 1;
     return true;
-  } catch(e) {
-    console.error('Erro ao carregar Supabase:', e);
-    hideLoader();
-    return false;
-  }
+  } catch(e) { console.warn('Erro ao carregar:', e); return false; }
 }
 
 let clientes = [];
@@ -1043,22 +1012,12 @@ function hideLoader() { const el = document.getElementById('sb-loader'); if(el) 
 function toggleSenha() {
   const inp = document.getElementById('inp-pass');
   const icon = document.getElementById('eye-icon');
-  const novoTipo = inp.type === 'password' ? 'text' : 'password';
-  const val = inp.value;
-  const novo = document.createElement('input');
-  novo.type = novoTipo;
-  novo.id = 'inp-pass';
-  novo.placeholder = 'Digite sua senha';
-  novo.autocomplete = 'current-password';
-  novo.value = val;
-  novo.style.cssText = 'width:100%;padding:12px 44px 12px 16px;border:2px solid var(--border);border-radius:10px;font-size:14px;font-family:Nunito,sans-serif;outline:none;color:#374151;background-color:#ffffff;box-sizing:border-box;';
-  novo.addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
-  inp.replaceWith(novo);
-  novo.focus();
-  if (novoTipo === 'text') {
-    icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    icon.innerHTML = `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>`;
   } else {
-    icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+    inp.type = 'password';
+    icon.innerHTML = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>`;
   }
 }
 
@@ -1068,51 +1027,26 @@ function toggleSenha() {
     const saved = localStorage.getItem('cap_login');
     if (saved) {
       const { user, pass } = JSON.parse(saved);
-      // Só preenche se as credenciais ainda são válidas
-      if (user && USERS[user] && USERS[user].pass === pass) {
-        document.getElementById('inp-user').value = user || '';
-        document.getElementById('inp-pass').value = pass || '';
-        document.getElementById('lembrar-senha').checked = true;
-      } else {
-        // Credenciais antigas/inválidas — limpa
-        localStorage.removeItem('cap_login');
-      }
+      document.getElementById('inp-user').value = user || '';
+      document.getElementById('inp-pass').value = pass || '';
+      document.getElementById('lembrar-senha').checked = true;
     }
-  } catch(e) { localStorage.removeItem('cap_login'); }
+  } catch(e) {}
 })();
 
 function doLogin() {
-  const userEl = document.getElementById('inp-user');
-  const passEl = document.getElementById('inp-pass');
-  if (!userEl || !passEl) { alert('Erro: campos de login não encontrados.'); return; }
-
-  const user = userEl.value.trim().toLowerCase();
-  const pass = passEl.value;
+  const user = document.getElementById('inp-user').value.trim().toLowerCase();
+  const pass = document.getElementById('inp-pass').value.trim();
   const lembrar = document.getElementById('lembrar-senha').checked;
 
-  if (!user || !pass) {
-    document.getElementById('login-error').style.display = 'block';
-    document.getElementById('login-error').textContent = 'Preencha usuário e senha.';
-    return;
+  if (lembrar) {
+    localStorage.setItem('cap_login', JSON.stringify({ user, pass }));
+  } else {
+    localStorage.removeItem('cap_login');
   }
 
-  // Verifica no USERS carregado OU nos defaults (fallback de segurança)
-  const userData = (USERS[user] && USERS[user].pass === pass) ? USERS[user]
-                 : (USERS_DEFAULT[user] && USERS_DEFAULT[user].pass === pass) ? USERS_DEFAULT[user]
-                 : null;
-
-  if (userData) {
-    // Se logou pelo default mas USERS está corrompido, reseta
-    if (!USERS[user] || USERS[user].pass !== pass) {
-      USERS = JSON.parse(JSON.stringify(USERS_DEFAULT));
-      saveUsers(USERS);
-    }
-    if (lembrar) {
-      localStorage.setItem('cap_login', JSON.stringify({ user, pass }));
-    } else {
-      localStorage.removeItem('cap_login');
-    }
-    currentUser = { key: user, ...userData };
+  if (USERS[user] && USERS[user].pass === pass) {
+    currentUser = { key: user, ...USERS[user] };
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     document.getElementById('sidebar-user').textContent = currentUser.name;
@@ -1121,18 +1055,10 @@ function doLogin() {
     buildSidebar();
     initApp();
   } else {
-    if (lembrar) localStorage.removeItem('cap_login');
     document.getElementById('login-error').style.display = 'block';
-    document.getElementById('login-error').textContent = 'Usuário ou senha incorretos.';
   }
 }
-// Listener de Enter no login — usando document para sobreviver à recriação do campo
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Enter' && document.getElementById('login-screen') &&
-      document.getElementById('login-screen').style.display !== 'none') {
-    doLogin();
-  }
-});
+document.getElementById('inp-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 
 function doLogout() {
   Object.values(timerIntervals).forEach(clearInterval);
@@ -1561,12 +1487,12 @@ function editCliente(id) {
   openModal('modal-cliente');
 }
 
-async function saveCliente() {
+function saveCliente() {
   const nome = document.getElementById('cli-nome').value.trim();
   if (!nome) { alert('Nome obrigatório.'); return; }
-  const payload = {
-    nome,
-    contato: document.getElementById('cli-contato').value,
+  const obj = {
+    id: editingClienteId || nextId.cli++,
+    nome, contato: document.getElementById('cli-contato').value,
     whatsapp: document.getElementById('cli-whatsapp').value,
     email: document.getElementById('cli-email').value,
     cnpj: document.getElementById('cli-cnpj').value,
@@ -1576,28 +1502,22 @@ async function saveCliente() {
     aniversario: document.getElementById('cli-aniversario').value,
     obs: document.getElementById('cli-obs').value,
   };
-  showLoader('💾 Salvando cliente...');
   if (editingClienteId) {
-    await sbUpdate('clientes', editingClienteId, payload);
     const idx = clientes.findIndex(c => c.id === editingClienteId);
-    clientes[idx] = { ...clientes[idx], ...payload };
+    clientes[idx] = obj;
   } else {
-    const row = await sbInsert('clientes', payload);
-    if (row) clientes.push(mapCliente(row));
-    recalcNextId();
+    clientes.push(obj);
   }
-  hideLoader();
   closeModal('modal-cliente');
   updateClienteSelects();
+  salvarDB();
   renderClientes();
 }
 
-async function deleteCliente(id) {
+function deleteCliente(id) {
   if (!confirm('Excluir este cliente?')) return;
-  showLoader('🗑 Excluindo...');
-  await sbDelete('clientes', id);
   clientes = clientes.filter(c => c.id !== id);
-  hideLoader();
+  salvarDB();
   updateClienteSelects();
   renderClientes();
 }
@@ -1682,30 +1602,35 @@ function preencherMensalidade() {
   if (!refEl.value) refEl.value = `${mesNome}/${ano}`;
 }
 
-async function saveMensalidade() {
+function saveMensalidade() {
   const cid = parseInt(document.getElementById('mens-cliente').value);
   const desc = document.getElementById('mens-desc').value.trim();
   const valor = parseFloat(document.getElementById('mens-valor').value);
   const venc = document.getElementById('mens-venc').value;
   if (!cid||!desc||!venc) { alert('Preencha os campos obrigatórios.'); return; }
   const ref = document.getElementById('mens-ref').value;
-  showLoader('💾 Salvando...');
   if (editingMensId) {
-    const patch = { cliente_id: cid, descricao: desc, valor, vencimento: venc, referencia: ref };
-    await sbUpdate('mensalidades', editingMensId, patch);
     const idx = mensalidades.findIndex(m=>m.id===editingMensId);
-    if (idx>=0) { mensalidades[idx].clienteId=cid; mensalidades[idx].desc=desc; mensalidades[idx].valor=valor; mensalidades[idx].vencimento=venc; mensalidades[idx].ref=ref; }
+    if (idx>=0) {
+      mensalidades[idx].clienteId = cid;
+      mensalidades[idx].desc = desc;
+      mensalidades[idx].valor = valor;
+      mensalidades[idx].vencimento = venc;
+      mensalidades[idx].ref = ref;
+    }
     editingMensId = null;
   } else {
-    const payload = { cliente_id: cid, descricao: desc, valor, vencimento: venc, referencia: ref, status: 'em_aberto', forma: '', data_pagto: null, enviado_em: null, concluido_em: null };
-    const row = await sbInsert('mensalidades', payload);
-    if (row) mensalidades.push(mapMens(row));
-    recalcNextId();
+    mensalidades.push({
+      id: nextId.mens++, clienteId: cid, desc, valor, vencimento: venc,
+      ref,
+      status: 'em_aberto',
+      forma: '', dataPagto: '', enviadoEm: '', concluidoEm: ''
+    });
   }
-  hideLoader();
   document.getElementById('modal-mens-title').textContent = 'Novo Lançamento de Mensalidade';
   document.getElementById('btn-save-mens').textContent = 'Lançar Mensalidade';
   closeModal('modal-mensalidade');
+  salvarDB();
   renderMensalidades();
   renderDashFin();
 }
@@ -1724,24 +1649,18 @@ function editMensalidade(id) {
   openModal('modal-mensalidade');
 }
 
-async function deleteMensalidade(id) {
+function deleteMensalidade(id) {
   if (!confirm('Excluir este lançamento?')) return;
-  showLoader('🗑 Excluindo...');
-  await sbDelete('mensalidades', id);
   mensalidades = mensalidades.filter(m=>m.id!==id);
-  hideLoader();
   refreshAllMens();
 }
 
 // Passo 1: Em Aberto → Enviado ao Cliente
-async function marcarEnviado(id) {
+function marcarEnviado(id) {
   const m = mensalidades.find(x=>x.id===id);
   if (!m) return;
-  const patch = { status: 'enviado', enviado_em: new Date().toISOString().split('T')[0] };
-  showLoader('💾 Atualizando...');
-  await sbUpdate('mensalidades', id, patch);
-  m.status = 'enviado'; m.enviadoEm = patch.enviado_em;
-  hideLoader();
+  m.status = 'enviado';
+  m.enviadoEm = new Date().toISOString().split('T')[0];
   refreshAllMens();
 }
 
@@ -1785,38 +1704,35 @@ function abrirCobranca(id) {
 }
 
 // Passo 3: Cobrança → Concluído (status=recebido)
-async function confirmarPagamento() {
+function confirmarPagamento() {
   const id = parseInt(document.getElementById('cob-mens-id').value);
   const forma = document.getElementById('cob-forma').value;
   const data = document.getElementById('cob-data').value;
   if (!forma) { alert('Selecione a forma de pagamento.'); return; }
   if (!data) { alert('Informe a data do pagamento.'); return; }
   const m = mensalidades.find(x=>x.id===id);
-  const patch = { status: 'recebido', forma, data_pagto: data, concluido_em: new Date().toISOString().split('T')[0] };
-  showLoader('💾 Registrando pagamento...');
-  await sbUpdate('mensalidades', id, patch);
-  m.status='recebido'; m.forma=forma; m.dataPagto=data; m.concluidoEm=patch.concluido_em;
-  hideLoader();
+  m.status = 'recebido';
+  m.forma = forma;
+  m.dataPagto = data;
+  m.concluidoEm = new Date().toISOString().split('T')[0];
   closeModal('modal-cobranca-form');
   refreshAllMens();
 }
 
-async function voltarAberto(id) {
+function voltarAberto(id) {
   const m = mensalidades.find(x=>x.id===id);
-  showLoader('💾 Revertendo...');
-  await sbUpdate('mensalidades', id, { status: 'em_aberto', enviado_em: null });
-  m.status='em_aberto'; m.enviadoEm='';
-  hideLoader();
+  m.status = 'em_aberto';
+  m.enviadoEm = '';
   refreshAllMens();
 }
 
-async function voltarEnviado(id) {
+function voltarEnviado(id) {
   if (!confirm('Reverter este pagamento para "Enviado ao Cliente"?')) return;
   const m = mensalidades.find(x=>x.id===id);
-  showLoader('💾 Revertendo...');
-  await sbUpdate('mensalidades', id, { status: 'enviado', forma: null, data_pagto: null, concluido_em: null });
-  m.status='enviado'; m.forma=''; m.dataPagto=''; m.concluidoEm='';
-  hideLoader();
+  m.status = 'enviado';
+  m.forma = '';
+  m.dataPagto = '';
+  m.concluidoEm = '';
   refreshAllMens();
 }
 
@@ -1850,18 +1766,17 @@ function renderRecebidos() {
 }
 
 function refreshAllMens() {
+  salvarDB();
   renderMensalidades();
   renderEnviados();
   renderRecebidos();
   renderDashFin();
 }
 
-async function zerarValoresMensalidades() {
+function zerarValoresMensalidades() {
   if (!confirm('Isso vai zerar o valor (R$) de TODOS os lançamentos. Confirma?')) return;
-  showLoader('💾 Zerando valores...');
-  await Promise.all(mensalidades.map(m => sbUpdate('mensalidades', m.id, { valor: 0 })));
   mensalidades.forEach(m => m.valor = 0);
-  hideLoader();
+  salvarDB();
   refreshAllMens();
   alert('Valores zerados com sucesso!');
 }
@@ -1967,33 +1882,42 @@ function kanbanPrazoAlerta(fim) {
   return '';
 }
 
-async function moverKanban(id, novoStatus) {
+function moverKanban(id, novoStatus) {
   const t = tarefas.find(x=>x.id===id);
   if (!t) return;
   t.status = novoStatus;
-  if (novoStatus === 'concluido' && !t.fim) t.fim = new Date().toISOString().split('T')[0];
-  if (novoStatus === 'em_andamento' && !t.inicio) t.inicio = new Date().toISOString().split('T')[0];
-  await sbUpdate('tarefas', id, { status: novoStatus, fim: t.fim||null, inicio: t.inicio||null });
-  renderProjetos(); renderTarefas(); renderConcluidas(); renderDashTasks();
+  // Se concluindo e não tem data fim, preenche hoje
+  if (novoStatus === 'concluido' && !t.fim) {
+    t.fim = new Date().toISOString().split('T')[0];
+  }
+  // Se iniciando e não tem data início, preenche hoje
+  if (novoStatus === 'em_andamento' && !t.inicio) {
+    t.inicio = new Date().toISOString().split('T')[0];
+  }
+  salvarDB();
+  renderProjetos();
+  renderTarefas();
+  renderConcluidas();
+  renderDashTasks();
 }
 
-async function kanbanEditNome(id, nome) {
+function kanbanEditNome(id, nome) {
   const t = tarefas.find(x=>x.id===id);
-  if (t && nome) { t.nome = nome; await sbUpdate('tarefas', id, { nome }); renderTarefas(); }
+  if (t && nome) { t.nome = nome; salvarDB(); renderTarefas(); }
 }
 
-async function kanbanEditData(id, campo, valor) {
+function kanbanEditData(id, campo, valor) {
   const t = tarefas.find(x=>x.id===id);
   if (!t) return;
   t[campo] = valor;
-  const col = campo === 'inicio' ? 'inicio' : 'fim';
-  await sbUpdate('tarefas', id, { [col]: valor||null });
-  renderProjetos(); renderTarefas();
+  salvarDB();
+  renderProjetos();
+  renderTarefas();
 }
 
-async function kanbanEditPrioridade(id, val) {
+function kanbanEditPrioridade(id, val) {
   const t = tarefas.find(x=>x.id===id);
-  if (t) { t.prioridade = val; await sbUpdate('tarefas', id, { prioridade: val }); renderProjetos(); renderTarefas(); }
+  if (t) { t.prioridade = val; salvarDB(); renderProjetos(); renderTarefas(); }
 }
 
 // ============================================================
@@ -2228,78 +2152,25 @@ function renderTarefas() {
   tarefas.filter(t=>t.timerRunning).forEach(t => startTimerInterval(t.id));
 }
 
-async function concluirTarefa(id) {
+function concluirTarefa(id) {
   const t = tarefas.find(x=>x.id===id);
   if (!t) return;
-  if (t.timerRunning) { clearInterval(timerIntervals[id]); delete timerIntervals[id]; t.timerRunning = false; }
+  // Para o timer se estiver rodando
+  if (t.timerRunning) {
+    clearInterval(timerIntervals[id]);
+    delete timerIntervals[id];
+    t.timerRunning = false;
+  }
   t.status = 'concluido';
   if (!t.fim) t.fim = new Date().toISOString().split('T')[0];
-  await sbUpdate('tarefas', id, { status: 'concluido', fim: t.fim, tempo_gasto: t.tempoGasto });
-  renderTarefas(); renderConcluidas(); renderProjetos(); renderDashTasks();
+  salvarDB();
+  renderTarefas();
+  renderConcluidas();
+  renderProjetos();
+  renderDashTasks();
 }
 
-function startTimerInterval(id) {
-  if (timerIntervals[id]) return;
-  timerIntervals[id] = setInterval(()=>{
-    const t = tarefas.find(x=>x.id===id);
-    if (!t) { clearInterval(timerIntervals[id]); return; }
-    t.tempoGasto++;
-    const el = document.getElementById('timer-'+id);
-    if (el) el.textContent = fmtTempo(t.tempoGasto);
-    // Salvar a cada 30 segundos no Supabase
-    if (t.tempoGasto % 30 === 0) sbUpdate('tarefas', id, { tempo_gasto: t.tempoGasto });
-  }, 1000);
-}
-
-async function saveTarefa() {
-  const cid = parseInt(document.getElementById('tar-cliente').value);
-  const nome = document.getElementById('tar-nome').value.trim();
-  if (!cid||!nome) { alert('Cliente e nome são obrigatórios.'); return; }
-  const payload = {
-    cliente_id: cid, nome,
-    inicio: document.getElementById('tar-inicio').value || null,
-    fim: document.getElementById('tar-fim').value || null,
-    status: document.getElementById('tar-status').value,
-    prioridade: document.getElementById('tar-prioridade').value,
-    descricao: document.getElementById('tar-desc').value,
-    tempo_gasto: editingTarefaId ? (tarefas.find(t=>t.id===editingTarefaId)||{}).tempoGasto||0 : 0,
-  };
-  showLoader('💾 Salvando tarefa...');
-  if (editingTarefaId) {
-    await sbUpdate('tarefas', editingTarefaId, payload);
-    const idx = tarefas.findIndex(t=>t.id===editingTarefaId);
-    tarefas[idx] = { ...tarefas[idx], clienteId: cid, nome, inicio: payload.inicio||'', fim: payload.fim||'', status: payload.status, prioridade: payload.prioridade, desc: payload.descricao };
-  } else {
-    const row = await sbInsert('tarefas', payload);
-    if (row) tarefas.push(mapTarefa(row));
-    recalcNextId();
-  }
-  hideLoader();
-  editingTarefaId = null;
-  closeModal('modal-tarefa');
-  renderTarefas(); renderProjetos(); renderConcluidas(); renderDashTasks();
-}
-
-async function deleteTarefa(id) {
-  if (!confirm('Excluir tarefa?')) return;
-  if (timerIntervals[id]) { clearInterval(timerIntervals[id]); delete timerIntervals[id]; }
-  showLoader('🗑 Excluindo...');
-  await sbDelete('tarefas', id);
-  tarefas = tarefas.filter(t=>t.id!==id);
-  hideLoader();
-  renderTarefas(); renderProjetos(); renderConcluidas();
-}
-
-async function reabrirTarefa(id) {
-  if (!confirm('Reverter tarefa para "Em Andamento"?')) return;
-  const t = tarefas.find(x=>x.id===id);
-  if (!t) return;
-  t.status = 'em_andamento';
-  showLoader('💾 Revertendo...');
-  await sbUpdate('tarefas', id, { status: 'em_andamento' });
-  hideLoader();
-  renderTarefas(); renderProjetos(); renderConcluidas(); renderDashTasks();
-}
+function toggleTimer(id) {
   const t = tarefas.find(x=>x.id===id);
   if (t.timerRunning) {
     clearInterval(timerIntervals[id]);
@@ -2316,6 +2187,46 @@ async function reabrirTarefa(id) {
   }
 }
 
+function startTimerInterval(id) {
+  if (timerIntervals[id]) return;
+  timerIntervals[id] = setInterval(()=>{
+    const t = tarefas.find(x=>x.id===id);
+    if (!t) { clearInterval(timerIntervals[id]); return; }
+    t.tempoGasto++;
+    const el = document.getElementById('timer-'+id);
+    if (el) el.textContent = fmtTempo(t.tempoGasto);
+    // Salvar a cada 30 segundos
+    if (t.tempoGasto % 30 === 0) salvarDB();
+  }, 1000);
+}
+
+function saveTarefa() {
+  const cid = parseInt(document.getElementById('tar-cliente').value);
+  const nome = document.getElementById('tar-nome').value.trim();
+  if (!cid||!nome) { alert('Cliente e nome são obrigatórios.'); return; }
+  const obj = {
+    id: editingTarefaId||nextId.tar++,
+    clienteId: cid, nome,
+    inicio: document.getElementById('tar-inicio').value,
+    fim: document.getElementById('tar-fim').value,
+    status: document.getElementById('tar-status').value,
+    prioridade: document.getElementById('tar-prioridade').value,
+    desc: document.getElementById('tar-desc').value,
+    tempoGasto: editingTarefaId ? (tarefas.find(t=>t.id===editingTarefaId)||{}).tempoGasto||0 : 0,
+    timerRunning: false
+  };
+  if (editingTarefaId) {
+    const idx = tarefas.findIndex(t=>t.id===editingTarefaId);
+    tarefas[idx] = obj;
+  } else {
+    tarefas.push(obj);
+  }
+  editingTarefaId = null;
+  closeModal('modal-tarefa');
+  salvarDB();
+  renderTarefas(); renderProjetos(); renderConcluidas(); renderDashTasks();
+}
+
 function editTarefa(id) {
   editingTarefaId = id;
   const t = tarefas.find(x=>x.id===id);
@@ -2328,6 +2239,23 @@ function editTarefa(id) {
   document.getElementById('tar-prioridade').value=t.prioridade;
   document.getElementById('tar-desc').value=t.desc||'';
   openModal('modal-tarefa');
+}
+
+function deleteTarefa(id) {
+  if (!confirm('Excluir tarefa?')) return;
+  if (timerIntervals[id]) { clearInterval(timerIntervals[id]); delete timerIntervals[id]; }
+  tarefas = tarefas.filter(t=>t.id!==id);
+  salvarDB();
+  renderTarefas(); renderProjetos(); renderConcluidas();
+}
+
+function reabrirTarefa(id) {
+  if (!confirm('Reverter tarefa para "Em Andamento"?')) return;
+  const t = tarefas.find(x=>x.id===id);
+  if (!t) return;
+  t.status = 'em_andamento';
+  salvarDB();
+  renderTarefas(); renderProjetos(); renderConcluidas(); renderDashTasks();
 }
 
 // New tarefa button
@@ -2964,46 +2892,37 @@ function editarReuniao(id) {
   openModal('modal-reuniao');
 }
 
-async function salvarReuniao() {
+function salvarReuniao() {
   const titulo = document.getElementById('reu-titulo').value.trim();
   const data = document.getElementById('reu-data').value;
   if (!titulo || !data) { alert('Título e data são obrigatórios.'); return; }
   const idAtual = parseInt(document.getElementById('reu-id').value) || 0;
-  const payload = {
+  const obj = {
+    id: idAtual || nextReuId++,
     titulo, data,
     hora: document.getElementById('reu-hora').value,
     duracao: parseInt(document.getElementById('reu-duracao').value) || 60,
-    cliente_id: parseInt(document.getElementById('reu-cliente').value) || 0,
+    clienteId: parseInt(document.getElementById('reu-cliente').value) || 0,
     obs: document.getElementById('reu-obs').value,
   };
-  showLoader('💾 Salvando reunião...');
-  if (idAtual) {
-    await sbUpdate('reunioes', idAtual, payload);
-    const idx = reunioes.findIndex(r => r.id === idAtual);
-    reunioes[idx] = { id: idAtual, titulo, data, hora: payload.hora, duracao: payload.duracao, clienteId: payload.cliente_id, obs: payload.obs };
-  } else {
-    const row = await sbInsert('reunioes', payload);
-    if (row) reunioes.push(mapReuniao(row));
-    recalcNextId();
-  }
-  hideLoader();
+  if (idAtual) { const idx = reunioes.findIndex(r => r.id === idAtual); reunioes[idx] = obj; }
+  else { reunioes.push(obj); }
   closeModal('modal-reuniao');
+  salvarDB();
   renderCalendario();
 }
 
-async function excluirReuniao() {
+function excluirReuniao() {
   const id = parseInt(document.getElementById('reu-id').value);
   if (!id || !confirm('Excluir esta reunião?')) return;
-  showLoader('🗑 Excluindo...');
-  await sbDelete('reunioes', id);
   reunioes = reunioes.filter(r => r.id !== id);
-  hideLoader();
   closeModal('modal-reuniao');
+  salvarDB();
   renderCalendario();
 }
-
-async function initApp() {
-  await carregarDB();
+function initApp() {
+  // Carregar dados salvos do navegador
+  carregarDB();
   updateClienteSelects();
   calTarefasSelecionadas = new Set(tarefas.map(t => t.id));
   renderDashFin();
