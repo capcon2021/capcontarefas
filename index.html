@@ -920,7 +920,7 @@ const ALL_SCREENS = [
 ];
 
 // Versão dos usuários padrão — altere este número para forçar reset
-const USERS_VERSION = 2;
+const USERS_VERSION = 3;
 
 const USERS_DEFAULT = {
   admin:      { pass: 'cap2025',  name: 'Administrador', isAdmin: true,  screens: ALL_SCREENS.map(s=>s.id) },
@@ -928,20 +928,21 @@ const USERS_DEFAULT = {
   financeiro: { pass: 'fin123',   name: 'Financeiro',     isAdmin: false, screens: ['dashboard-fin','mensalidades','enviados','recebidos'] },
 };
 
-// Carregar usuários do localStorage (ou usar padrão)
+// Limpa dados antigos e carrega defaults
 function loadUsers() {
   try {
     const vSaved = parseInt(localStorage.getItem('cap_users_version') || '0');
     if (vSaved < USERS_VERSION) {
-      // Versão antiga ou sem versão — reseta para os defaults
       localStorage.removeItem('cap_users');
       localStorage.removeItem('cap_login');
       localStorage.setItem('cap_users_version', String(USERS_VERSION));
-      return JSON.parse(JSON.stringify(USERS_DEFAULT));
+    } else {
+      const saved = localStorage.getItem('cap_users');
+      if (saved) return JSON.parse(saved);
     }
-    const saved = localStorage.getItem('cap_users');
-    if (saved) return JSON.parse(saved);
-  } catch(e) {}
+  } catch(e) {
+    localStorage.clear();
+  }
   return JSON.parse(JSON.stringify(USERS_DEFAULT));
 }
 function saveUsers(users) {
@@ -1086,7 +1087,7 @@ function doLogin() {
   if (!userEl || !passEl) { alert('Erro: campos de login não encontrados.'); return; }
 
   const user = userEl.value.trim().toLowerCase();
-  const pass = passEl.value; // SEM .trim() para preservar espaços na senha
+  const pass = passEl.value;
   const lembrar = document.getElementById('lembrar-senha').checked;
 
   if (!user || !pass) {
@@ -1095,14 +1096,23 @@ function doLogin() {
     return;
   }
 
-  if (lembrar) {
-    localStorage.setItem('cap_login', JSON.stringify({ user, pass }));
-  } else {
-    localStorage.removeItem('cap_login');
-  }
+  // Verifica no USERS carregado OU nos defaults (fallback de segurança)
+  const userData = (USERS[user] && USERS[user].pass === pass) ? USERS[user]
+                 : (USERS_DEFAULT[user] && USERS_DEFAULT[user].pass === pass) ? USERS_DEFAULT[user]
+                 : null;
 
-  if (USERS[user] && USERS[user].pass === pass) {
-    currentUser = { key: user, ...USERS[user] };
+  if (userData) {
+    // Se logou pelo default mas USERS está corrompido, reseta
+    if (!USERS[user] || USERS[user].pass !== pass) {
+      USERS = JSON.parse(JSON.stringify(USERS_DEFAULT));
+      saveUsers(USERS);
+    }
+    if (lembrar) {
+      localStorage.setItem('cap_login', JSON.stringify({ user, pass }));
+    } else {
+      localStorage.removeItem('cap_login');
+    }
+    currentUser = { key: user, ...userData };
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     document.getElementById('sidebar-user').textContent = currentUser.name;
@@ -1111,6 +1121,7 @@ function doLogin() {
     buildSidebar();
     initApp();
   } else {
+    if (lembrar) localStorage.removeItem('cap_login');
     document.getElementById('login-error').style.display = 'block';
     document.getElementById('login-error').textContent = 'Usuário ou senha incorretos.';
   }
