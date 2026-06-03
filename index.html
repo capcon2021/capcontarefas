@@ -670,7 +670,7 @@ tr:hover td { background: #fafafa; }
     </div>
     <div class="form-grid">
       <div class="field"><label>Cliente *</label>
-        <select id="mens-cliente"><option value="">Selecione...</option></select>
+        <select id="mens-cliente" onchange="preencherMensalidade()"><option value="">Selecione...</option></select>
       </div>
       <div class="field"><label>Descrição *</label><input type="text" id="mens-desc" placeholder="Ex: Mensalidade Maio/2025"></div>
       <div class="field"><label>Valor (R$) *</label><input type="number" id="mens-valor" placeholder="0,00" step="0.01"></div>
@@ -707,6 +707,7 @@ tr:hover td { background: #fafafa; }
           <option value="">Selecione...</option>
           <option value="pix">PIX</option>
           <option value="boleto">Boleto</option>
+          <option value="cheque">Cheque</option>
           <option value="ted">TED/DOC</option>
           <option value="dinheiro">Dinheiro</option>
           <option value="cartao">Cartão</option>
@@ -1563,6 +1564,41 @@ function novaMensalidade() {
   document.getElementById('mens-cliente').value='';
   document.getElementById('mens-valor').value='';
   openModal('modal-mensalidade');
+}
+
+function preencherMensalidade() {
+  const cid = parseInt(document.getElementById('mens-cliente').value);
+  if (!cid) return;
+  const cli = getCliente(cid);
+  if (!cli) return;
+
+  // Mês/Ano atual em português
+  const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const hoje = new Date();
+  const mesNome = meses[hoje.getMonth()];
+  const ano = hoje.getFullYear();
+
+  // Só preenche descrição se estiver vazia ou for novo lançamento
+  const descEl = document.getElementById('mens-desc');
+  if (!editingMensId || !descEl.value) {
+    descEl.value = `Mensalidade C@P – ${mesNome}/${ano}`;
+  }
+
+  // Preenche valor do cadastro do cliente (editável)
+  if (cli.valor) {
+    document.getElementById('mens-valor').value = cli.valor;
+  }
+
+  // Preenche data de vencimento com o dia cadastrado no cliente
+  if (cli.vencimento) {
+    const dia = String(cli.vencimento).padStart(2, '0');
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+    document.getElementById('mens-venc').value = `${ano}-${mes}-${dia}`;
+  }
+
+  // Preenche referência
+  const refEl = document.getElementById('mens-ref');
+  if (!refEl.value) refEl.value = `${mesNome}/${ano}`;
 }
 
 function saveMensalidade() {
