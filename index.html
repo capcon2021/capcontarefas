@@ -356,7 +356,7 @@ tr:hover td { background: #fafafa; }
         <div class="card">
           <div class="card-body">
             <table>
-              <thead><tr><th>Nome/Empresa</th><th>Contato</th><th>WhatsApp</th><th>E-mail</th><th>Valor Mensalidade</th><th>Ações</th></tr></thead>
+              <thead><tr><th>Nome/Empresa</th><th>Contato</th><th>WhatsApp</th><th>E-mail</th><th>Ações</th></tr></thead>
               <tbody id="tb-clientes"></tbody>
             </table>
           </div>
@@ -367,10 +367,13 @@ tr:hover td { background: #fafafa; }
       <div class="screen" id="screen-mensalidades">
         <div class="page-header">
           <div><div class="page-title">Mensalidades</div><div class="page-sub">Lançamento e controle</div></div>
-          <button class="btn btn-primary" onclick="novaMensalidade()">
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-secondary" onclick="zerarValoresMensalidades()" title="Zerar valores de todos os lançamentos">🔄 Zerar Valores</button>
+            <button class="btn btn-primary" onclick="novaMensalidade()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Novo Lançamento
           </button>
+          </div>
         </div>
         <div class="filters">
           <select id="fil-mens-status" onchange="renderMensalidades()">
@@ -649,7 +652,6 @@ tr:hover td { background: #fafafa; }
       <div class="field"><label>E-mail</label><input type="email" id="cli-email" placeholder="email@empresa.com"></div>
       <div class="field"><label>CNPJ / CPF</label><input type="text" id="cli-cnpj" placeholder="00.000.000/0001-00"></div>
       <div class="field"><label>Endereço / Cidade</label><input type="text" id="cli-endereco" placeholder="Cidade - UF"></div>
-      <div class="field"><label>Valor Mensalidade (R$)</label><input type="number" id="cli-valor" placeholder="0,00" step="0.01"></div>
       <div class="field"><label>Dia de Vencimento</label><input type="number" id="cli-venc" placeholder="Ex: 10" min="1" max="31"></div>
       <div class="field"><label>🎂 Data de Aniversário</label><input type="date" id="cli-aniversario" title="Aniversário do responsável ou fundação da empresa"></div>
       <div class="field" style="grid-column:1/-1"><label>Observações</label><textarea id="cli-obs" rows="2" placeholder="Informações adicionais..."></textarea></div>
@@ -673,7 +675,7 @@ tr:hover td { background: #fafafa; }
         <select id="mens-cliente" onchange="preencherMensalidade()"><option value="">Selecione...</option></select>
       </div>
       <div class="field"><label>Descrição *</label><input type="text" id="mens-desc" placeholder="Ex: Mensalidade Maio/2025"></div>
-      <div class="field"><label>Valor (R$) *</label><input type="number" id="mens-valor" placeholder="0,00" step="0.01"></div>
+      <input type="hidden" id="mens-valor" value="0">
       <div class="field"><label>Vencimento *</label><input type="date" id="mens-venc"></div>
       <div class="field"><label>Referência (Mês/Ano)</label><input type="text" id="mens-ref" placeholder="Ex: Maio/2025"></div>
       <div class="field" style="display:flex;align-items:flex-end;">
@@ -964,32 +966,41 @@ function mapReuniao(r) { return { id: r.id, titulo: r.titulo||'', data: r.data||
 
 // Estado local (espelho em memória do banco)
 // ============================================================
-// PERSISTÊNCIA LOCAL (localStorage) — dados salvos no navegador
+// PERSISTÊNCIA — Supabase (multi-dispositivo)
 // ============================================================
-const DB_KEY = 'cap_gestao_db';
 
-function salvarDB() {
-  try {
-    localStorage.setItem(DB_KEY, JSON.stringify({
-      clientes, mensalidades, tarefas, reunioes,
-      nextId, nextReuId: nextReuId
-    }));
-  } catch(e) { console.warn('Erro ao salvar:', e); }
+// Recalcula nextId a partir dos dados carregados
+function recalcNextId() {
+  nextId.cli  = clientes.length     ? Math.max(...clientes.map(x=>x.id))     + 1 : 1;
+  nextId.mens = mensalidades.length ? Math.max(...mensalidades.map(x=>x.id)) + 1 : 1;
+  nextId.tar  = tarefas.length      ? Math.max(...tarefas.map(x=>x.id))      + 1 : 1;
+  nextReuId   = reunioes.length     ? Math.max(...reunioes.map(x=>x.id))     + 1 : 1;
 }
 
-function carregarDB() {
+// salvarDB agora é no-op — cada operação já grava direto no Supabase
+function salvarDB() { /* gravação feita por sbInsert/sbUpdate/sbDelete */ }
+
+async function carregarDB() {
+  showLoader('🔄 Carregando dados...');
   try {
-    const raw = localStorage.getItem(DB_KEY);
-    if (!raw) return false;
-    const db = JSON.parse(raw);
-    clientes    = db.clientes    || [];
-    mensalidades = db.mensalidades || [];
-    tarefas     = (db.tarefas    || []).map(t => ({ ...t, timerRunning: false }));
-    reunioes    = db.reunioes    || [];
-    nextId      = db.nextId      || { cli: 1, mens: 1, tar: 1 };
-    nextReuId   = db.nextReuId   || 1;
+    const [rc, rm, rt, rr] = await Promise.all([
+      sbGet('clientes'),
+      sbGet('mensalidades'),
+      sbGet('tarefas'),
+      sbGet('reunioes'),
+    ]);
+    clientes     = (rc||[]).map(mapCliente);
+    mensalidades = (rm||[]).map(mapMens);
+    tarefas      = (rt||[]).map(mapTarefa);
+    reunioes     = (rr||[]).map(mapReuniao);
+    recalcNextId();
+    hideLoader();
     return true;
-  } catch(e) { console.warn('Erro ao carregar:', e); return false; }
+  } catch(e) {
+    console.error('Erro ao carregar Supabase:', e);
+    hideLoader();
+    return false;
+  }
 }
 
 let clientes = [];
@@ -1445,14 +1456,13 @@ function renderClientes() {
   const q = (document.getElementById('search-cliente').value||'').toLowerCase();
   const rows = clientes.filter(c => c.nome.toLowerCase().includes(q) || (c.contato||'').toLowerCase().includes(q));
   const tb = document.getElementById('tb-clientes');
-  if (!rows.length) { tb.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhum cliente encontrado.</td></tr>'; return; }
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhum cliente encontrado.</td></tr>'; return; }
   tb.innerHTML = rows.map(c => `
     <tr>
       <td><strong>${c.nome}</strong></td>
       <td>${c.contato||'–'}</td>
       <td>${c.whatsapp||'–'}</td>
       <td>${c.email||'–'}</td>
-      <td>${fmt(c.valor)}</td>
       <td><div class="action-row">
         <button class="btn btn-sm btn-secondary" onclick="editCliente(${c.id})">✏️ Editar</button>
         <button class="btn btn-sm btn-danger" onclick="deleteCliente(${c.id})">🗑</button>
@@ -1464,7 +1474,7 @@ function openNovoCliente() {
   editingClienteId = null;
   document.getElementById('modal-cliente-title').textContent = 'Novo Cliente';
   ['cli-nome','cli-contato','cli-whatsapp','cli-email','cli-cnpj','cli-endereco','cli-obs'].forEach(id => document.getElementById(id).value='');
-  ['cli-valor','cli-venc'].forEach(id => document.getElementById(id).value='');
+  ['cli-valor','cli-venc'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
   document.getElementById('cli-aniversario').value = '';
   openModal('modal-cliente');
 }
@@ -1480,19 +1490,18 @@ function editCliente(id) {
   document.getElementById('cli-email').value = c.email||'';
   document.getElementById('cli-cnpj').value = c.cnpj||'';
   document.getElementById('cli-endereco').value = c.endereco||'';
-  document.getElementById('cli-valor').value = c.valor||'';
   document.getElementById('cli-venc').value = c.vencimento||'';
   document.getElementById('cli-aniversario').value = c.aniversario||'';
   document.getElementById('cli-obs').value = c.obs||'';
   openModal('modal-cliente');
 }
 
-function saveCliente() {
+async function saveCliente() {
   const nome = document.getElementById('cli-nome').value.trim();
   if (!nome) { alert('Nome obrigatório.'); return; }
-  const obj = {
-    id: editingClienteId || nextId.cli++,
-    nome, contato: document.getElementById('cli-contato').value,
+  const payload = {
+    nome,
+    contato: document.getElementById('cli-contato').value,
     whatsapp: document.getElementById('cli-whatsapp').value,
     email: document.getElementById('cli-email').value,
     cnpj: document.getElementById('cli-cnpj').value,
@@ -1502,22 +1511,28 @@ function saveCliente() {
     aniversario: document.getElementById('cli-aniversario').value,
     obs: document.getElementById('cli-obs').value,
   };
+  showLoader('💾 Salvando cliente...');
   if (editingClienteId) {
+    await sbUpdate('clientes', editingClienteId, payload);
     const idx = clientes.findIndex(c => c.id === editingClienteId);
-    clientes[idx] = obj;
+    clientes[idx] = { ...clientes[idx], ...payload };
   } else {
-    clientes.push(obj);
+    const row = await sbInsert('clientes', payload);
+    if (row) clientes.push(mapCliente(row));
+    recalcNextId();
   }
+  hideLoader();
   closeModal('modal-cliente');
   updateClienteSelects();
-  salvarDB();
   renderClientes();
 }
 
-function deleteCliente(id) {
+async function deleteCliente(id) {
   if (!confirm('Excluir este cliente?')) return;
+  showLoader('🗑 Excluindo...');
+  await sbDelete('clientes', id);
   clientes = clientes.filter(c => c.id !== id);
-  salvarDB();
+  hideLoader();
   updateClienteSelects();
   renderClientes();
 }
@@ -1562,7 +1577,7 @@ function novaMensalidade() {
   updateClienteSelects();
   ['mens-desc','mens-venc','mens-ref'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('mens-cliente').value='';
-  document.getElementById('mens-valor').value='';
+  document.getElementById('mens-valor').value='0';
   openModal('modal-mensalidade');
 }
 
@@ -1586,6 +1601,7 @@ function preencherMensalidade() {
 
   // Preenche valor do cadastro do cliente (editável)
   if (cli.valor) {
+    // valor mantido internamente mas não exibido
     document.getElementById('mens-valor').value = cli.valor;
   }
 
@@ -1601,35 +1617,30 @@ function preencherMensalidade() {
   if (!refEl.value) refEl.value = `${mesNome}/${ano}`;
 }
 
-function saveMensalidade() {
+async function saveMensalidade() {
   const cid = parseInt(document.getElementById('mens-cliente').value);
   const desc = document.getElementById('mens-desc').value.trim();
   const valor = parseFloat(document.getElementById('mens-valor').value);
   const venc = document.getElementById('mens-venc').value;
-  if (!cid||!desc||!valor||!venc) { alert('Preencha os campos obrigatórios.'); return; }
+  if (!cid||!desc||!venc) { alert('Preencha os campos obrigatórios.'); return; }
   const ref = document.getElementById('mens-ref').value;
+  showLoader('💾 Salvando...');
   if (editingMensId) {
+    const patch = { cliente_id: cid, descricao: desc, valor, vencimento: venc, referencia: ref };
+    await sbUpdate('mensalidades', editingMensId, patch);
     const idx = mensalidades.findIndex(m=>m.id===editingMensId);
-    if (idx>=0) {
-      mensalidades[idx].clienteId = cid;
-      mensalidades[idx].desc = desc;
-      mensalidades[idx].valor = valor;
-      mensalidades[idx].vencimento = venc;
-      mensalidades[idx].ref = ref;
-    }
+    if (idx>=0) { mensalidades[idx].clienteId=cid; mensalidades[idx].desc=desc; mensalidades[idx].valor=valor; mensalidades[idx].vencimento=venc; mensalidades[idx].ref=ref; }
     editingMensId = null;
   } else {
-    mensalidades.push({
-      id: nextId.mens++, clienteId: cid, desc, valor, vencimento: venc,
-      ref,
-      status: 'em_aberto',
-      forma: '', dataPagto: '', enviadoEm: '', concluidoEm: ''
-    });
+    const payload = { cliente_id: cid, descricao: desc, valor, vencimento: venc, referencia: ref, status: 'em_aberto', forma: '', data_pagto: null, enviado_em: null, concluido_em: null };
+    const row = await sbInsert('mensalidades', payload);
+    if (row) mensalidades.push(mapMens(row));
+    recalcNextId();
   }
+  hideLoader();
   document.getElementById('modal-mens-title').textContent = 'Novo Lançamento de Mensalidade';
   document.getElementById('btn-save-mens').textContent = 'Lançar Mensalidade';
   closeModal('modal-mensalidade');
-  salvarDB();
   renderMensalidades();
   renderDashFin();
 }
@@ -1648,18 +1659,24 @@ function editMensalidade(id) {
   openModal('modal-mensalidade');
 }
 
-function deleteMensalidade(id) {
+async function deleteMensalidade(id) {
   if (!confirm('Excluir este lançamento?')) return;
+  showLoader('🗑 Excluindo...');
+  await sbDelete('mensalidades', id);
   mensalidades = mensalidades.filter(m=>m.id!==id);
+  hideLoader();
   refreshAllMens();
 }
 
 // Passo 1: Em Aberto → Enviado ao Cliente
-function marcarEnviado(id) {
+async function marcarEnviado(id) {
   const m = mensalidades.find(x=>x.id===id);
   if (!m) return;
-  m.status = 'enviado';
-  m.enviadoEm = new Date().toISOString().split('T')[0];
+  const patch = { status: 'enviado', enviado_em: new Date().toISOString().split('T')[0] };
+  showLoader('💾 Atualizando...');
+  await sbUpdate('mensalidades', id, patch);
+  m.status = 'enviado'; m.enviadoEm = patch.enviado_em;
+  hideLoader();
   refreshAllMens();
 }
 
@@ -1703,35 +1720,38 @@ function abrirCobranca(id) {
 }
 
 // Passo 3: Cobrança → Concluído (status=recebido)
-function confirmarPagamento() {
+async function confirmarPagamento() {
   const id = parseInt(document.getElementById('cob-mens-id').value);
   const forma = document.getElementById('cob-forma').value;
   const data = document.getElementById('cob-data').value;
   if (!forma) { alert('Selecione a forma de pagamento.'); return; }
   if (!data) { alert('Informe a data do pagamento.'); return; }
   const m = mensalidades.find(x=>x.id===id);
-  m.status = 'recebido';
-  m.forma = forma;
-  m.dataPagto = data;
-  m.concluidoEm = new Date().toISOString().split('T')[0];
+  const patch = { status: 'recebido', forma, data_pagto: data, concluido_em: new Date().toISOString().split('T')[0] };
+  showLoader('💾 Registrando pagamento...');
+  await sbUpdate('mensalidades', id, patch);
+  m.status='recebido'; m.forma=forma; m.dataPagto=data; m.concluidoEm=patch.concluido_em;
+  hideLoader();
   closeModal('modal-cobranca-form');
   refreshAllMens();
 }
 
-function voltarAberto(id) {
+async function voltarAberto(id) {
   const m = mensalidades.find(x=>x.id===id);
-  m.status = 'em_aberto';
-  m.enviadoEm = '';
+  showLoader('💾 Revertendo...');
+  await sbUpdate('mensalidades', id, { status: 'em_aberto', enviado_em: null });
+  m.status='em_aberto'; m.enviadoEm='';
+  hideLoader();
   refreshAllMens();
 }
 
-function voltarEnviado(id) {
+async function voltarEnviado(id) {
   if (!confirm('Reverter este pagamento para "Enviado ao Cliente"?')) return;
   const m = mensalidades.find(x=>x.id===id);
-  m.status = 'enviado';
-  m.forma = '';
-  m.dataPagto = '';
-  m.concluidoEm = '';
+  showLoader('💾 Revertendo...');
+  await sbUpdate('mensalidades', id, { status: 'enviado', forma: null, data_pagto: null, concluido_em: null });
+  m.status='enviado'; m.forma=''; m.dataPagto=''; m.concluidoEm='';
+  hideLoader();
   refreshAllMens();
 }
 
@@ -1765,11 +1785,20 @@ function renderRecebidos() {
 }
 
 function refreshAllMens() {
-  salvarDB();
   renderMensalidades();
   renderEnviados();
   renderRecebidos();
   renderDashFin();
+}
+
+async function zerarValoresMensalidades() {
+  if (!confirm('Isso vai zerar o valor (R$) de TODOS os lançamentos. Confirma?')) return;
+  showLoader('💾 Zerando valores...');
+  await Promise.all(mensalidades.map(m => sbUpdate('mensalidades', m.id, { valor: 0 })));
+  mensalidades.forEach(m => m.valor = 0);
+  hideLoader();
+  refreshAllMens();
+  alert('Valores zerados com sucesso!');
 }
 
 // ============================================================
@@ -1873,42 +1902,33 @@ function kanbanPrazoAlerta(fim) {
   return '';
 }
 
-function moverKanban(id, novoStatus) {
+async function moverKanban(id, novoStatus) {
   const t = tarefas.find(x=>x.id===id);
   if (!t) return;
   t.status = novoStatus;
-  // Se concluindo e não tem data fim, preenche hoje
-  if (novoStatus === 'concluido' && !t.fim) {
-    t.fim = new Date().toISOString().split('T')[0];
-  }
-  // Se iniciando e não tem data início, preenche hoje
-  if (novoStatus === 'em_andamento' && !t.inicio) {
-    t.inicio = new Date().toISOString().split('T')[0];
-  }
-  salvarDB();
-  renderProjetos();
-  renderTarefas();
-  renderConcluidas();
-  renderDashTasks();
+  if (novoStatus === 'concluido' && !t.fim) t.fim = new Date().toISOString().split('T')[0];
+  if (novoStatus === 'em_andamento' && !t.inicio) t.inicio = new Date().toISOString().split('T')[0];
+  await sbUpdate('tarefas', id, { status: novoStatus, fim: t.fim||null, inicio: t.inicio||null });
+  renderProjetos(); renderTarefas(); renderConcluidas(); renderDashTasks();
 }
 
-function kanbanEditNome(id, nome) {
+async function kanbanEditNome(id, nome) {
   const t = tarefas.find(x=>x.id===id);
-  if (t && nome) { t.nome = nome; salvarDB(); renderTarefas(); }
+  if (t && nome) { t.nome = nome; await sbUpdate('tarefas', id, { nome }); renderTarefas(); }
 }
 
-function kanbanEditData(id, campo, valor) {
+async function kanbanEditData(id, campo, valor) {
   const t = tarefas.find(x=>x.id===id);
   if (!t) return;
   t[campo] = valor;
-  salvarDB();
-  renderProjetos();
-  renderTarefas();
+  const col = campo === 'inicio' ? 'inicio' : 'fim';
+  await sbUpdate('tarefas', id, { [col]: valor||null });
+  renderProjetos(); renderTarefas();
 }
 
-function kanbanEditPrioridade(id, val) {
+async function kanbanEditPrioridade(id, val) {
   const t = tarefas.find(x=>x.id===id);
-  if (t) { t.prioridade = val; salvarDB(); renderProjetos(); renderTarefas(); }
+  if (t) { t.prioridade = val; await sbUpdate('tarefas', id, { prioridade: val }); renderProjetos(); renderTarefas(); }
 }
 
 // ============================================================
@@ -2143,25 +2163,78 @@ function renderTarefas() {
   tarefas.filter(t=>t.timerRunning).forEach(t => startTimerInterval(t.id));
 }
 
-function concluirTarefa(id) {
+async function concluirTarefa(id) {
   const t = tarefas.find(x=>x.id===id);
   if (!t) return;
-  // Para o timer se estiver rodando
-  if (t.timerRunning) {
-    clearInterval(timerIntervals[id]);
-    delete timerIntervals[id];
-    t.timerRunning = false;
-  }
+  if (t.timerRunning) { clearInterval(timerIntervals[id]); delete timerIntervals[id]; t.timerRunning = false; }
   t.status = 'concluido';
   if (!t.fim) t.fim = new Date().toISOString().split('T')[0];
-  salvarDB();
-  renderTarefas();
-  renderConcluidas();
-  renderProjetos();
-  renderDashTasks();
+  await sbUpdate('tarefas', id, { status: 'concluido', fim: t.fim, tempo_gasto: t.tempoGasto });
+  renderTarefas(); renderConcluidas(); renderProjetos(); renderDashTasks();
 }
 
-function toggleTimer(id) {
+function startTimerInterval(id) {
+  if (timerIntervals[id]) return;
+  timerIntervals[id] = setInterval(()=>{
+    const t = tarefas.find(x=>x.id===id);
+    if (!t) { clearInterval(timerIntervals[id]); return; }
+    t.tempoGasto++;
+    const el = document.getElementById('timer-'+id);
+    if (el) el.textContent = fmtTempo(t.tempoGasto);
+    // Salvar a cada 30 segundos no Supabase
+    if (t.tempoGasto % 30 === 0) sbUpdate('tarefas', id, { tempo_gasto: t.tempoGasto });
+  }, 1000);
+}
+
+async function saveTarefa() {
+  const cid = parseInt(document.getElementById('tar-cliente').value);
+  const nome = document.getElementById('tar-nome').value.trim();
+  if (!cid||!nome) { alert('Cliente e nome são obrigatórios.'); return; }
+  const payload = {
+    cliente_id: cid, nome,
+    inicio: document.getElementById('tar-inicio').value || null,
+    fim: document.getElementById('tar-fim').value || null,
+    status: document.getElementById('tar-status').value,
+    prioridade: document.getElementById('tar-prioridade').value,
+    descricao: document.getElementById('tar-desc').value,
+    tempo_gasto: editingTarefaId ? (tarefas.find(t=>t.id===editingTarefaId)||{}).tempoGasto||0 : 0,
+  };
+  showLoader('💾 Salvando tarefa...');
+  if (editingTarefaId) {
+    await sbUpdate('tarefas', editingTarefaId, payload);
+    const idx = tarefas.findIndex(t=>t.id===editingTarefaId);
+    tarefas[idx] = { ...tarefas[idx], clienteId: cid, nome, inicio: payload.inicio||'', fim: payload.fim||'', status: payload.status, prioridade: payload.prioridade, desc: payload.descricao };
+  } else {
+    const row = await sbInsert('tarefas', payload);
+    if (row) tarefas.push(mapTarefa(row));
+    recalcNextId();
+  }
+  hideLoader();
+  editingTarefaId = null;
+  closeModal('modal-tarefa');
+  renderTarefas(); renderProjetos(); renderConcluidas(); renderDashTasks();
+}
+
+async function deleteTarefa(id) {
+  if (!confirm('Excluir tarefa?')) return;
+  if (timerIntervals[id]) { clearInterval(timerIntervals[id]); delete timerIntervals[id]; }
+  showLoader('🗑 Excluindo...');
+  await sbDelete('tarefas', id);
+  tarefas = tarefas.filter(t=>t.id!==id);
+  hideLoader();
+  renderTarefas(); renderProjetos(); renderConcluidas();
+}
+
+async function reabrirTarefa(id) {
+  if (!confirm('Reverter tarefa para "Em Andamento"?')) return;
+  const t = tarefas.find(x=>x.id===id);
+  if (!t) return;
+  t.status = 'em_andamento';
+  showLoader('💾 Revertendo...');
+  await sbUpdate('tarefas', id, { status: 'em_andamento' });
+  hideLoader();
+  renderTarefas(); renderProjetos(); renderConcluidas(); renderDashTasks();
+}
   const t = tarefas.find(x=>x.id===id);
   if (t.timerRunning) {
     clearInterval(timerIntervals[id]);
@@ -2178,46 +2251,6 @@ function toggleTimer(id) {
   }
 }
 
-function startTimerInterval(id) {
-  if (timerIntervals[id]) return;
-  timerIntervals[id] = setInterval(()=>{
-    const t = tarefas.find(x=>x.id===id);
-    if (!t) { clearInterval(timerIntervals[id]); return; }
-    t.tempoGasto++;
-    const el = document.getElementById('timer-'+id);
-    if (el) el.textContent = fmtTempo(t.tempoGasto);
-    // Salvar a cada 30 segundos
-    if (t.tempoGasto % 30 === 0) salvarDB();
-  }, 1000);
-}
-
-function saveTarefa() {
-  const cid = parseInt(document.getElementById('tar-cliente').value);
-  const nome = document.getElementById('tar-nome').value.trim();
-  if (!cid||!nome) { alert('Cliente e nome são obrigatórios.'); return; }
-  const obj = {
-    id: editingTarefaId||nextId.tar++,
-    clienteId: cid, nome,
-    inicio: document.getElementById('tar-inicio').value,
-    fim: document.getElementById('tar-fim').value,
-    status: document.getElementById('tar-status').value,
-    prioridade: document.getElementById('tar-prioridade').value,
-    desc: document.getElementById('tar-desc').value,
-    tempoGasto: editingTarefaId ? (tarefas.find(t=>t.id===editingTarefaId)||{}).tempoGasto||0 : 0,
-    timerRunning: false
-  };
-  if (editingTarefaId) {
-    const idx = tarefas.findIndex(t=>t.id===editingTarefaId);
-    tarefas[idx] = obj;
-  } else {
-    tarefas.push(obj);
-  }
-  editingTarefaId = null;
-  closeModal('modal-tarefa');
-  salvarDB();
-  renderTarefas(); renderProjetos(); renderConcluidas(); renderDashTasks();
-}
-
 function editTarefa(id) {
   editingTarefaId = id;
   const t = tarefas.find(x=>x.id===id);
@@ -2230,23 +2263,6 @@ function editTarefa(id) {
   document.getElementById('tar-prioridade').value=t.prioridade;
   document.getElementById('tar-desc').value=t.desc||'';
   openModal('modal-tarefa');
-}
-
-function deleteTarefa(id) {
-  if (!confirm('Excluir tarefa?')) return;
-  if (timerIntervals[id]) { clearInterval(timerIntervals[id]); delete timerIntervals[id]; }
-  tarefas = tarefas.filter(t=>t.id!==id);
-  salvarDB();
-  renderTarefas(); renderProjetos(); renderConcluidas();
-}
-
-function reabrirTarefa(id) {
-  if (!confirm('Reverter tarefa para "Em Andamento"?')) return;
-  const t = tarefas.find(x=>x.id===id);
-  if (!t) return;
-  t.status = 'em_andamento';
-  salvarDB();
-  renderTarefas(); renderProjetos(); renderConcluidas(); renderDashTasks();
 }
 
 // New tarefa button
@@ -2883,37 +2899,46 @@ function editarReuniao(id) {
   openModal('modal-reuniao');
 }
 
-function salvarReuniao() {
+async function salvarReuniao() {
   const titulo = document.getElementById('reu-titulo').value.trim();
   const data = document.getElementById('reu-data').value;
   if (!titulo || !data) { alert('Título e data são obrigatórios.'); return; }
   const idAtual = parseInt(document.getElementById('reu-id').value) || 0;
-  const obj = {
-    id: idAtual || nextReuId++,
+  const payload = {
     titulo, data,
     hora: document.getElementById('reu-hora').value,
     duracao: parseInt(document.getElementById('reu-duracao').value) || 60,
-    clienteId: parseInt(document.getElementById('reu-cliente').value) || 0,
+    cliente_id: parseInt(document.getElementById('reu-cliente').value) || 0,
     obs: document.getElementById('reu-obs').value,
   };
-  if (idAtual) { const idx = reunioes.findIndex(r => r.id === idAtual); reunioes[idx] = obj; }
-  else { reunioes.push(obj); }
+  showLoader('💾 Salvando reunião...');
+  if (idAtual) {
+    await sbUpdate('reunioes', idAtual, payload);
+    const idx = reunioes.findIndex(r => r.id === idAtual);
+    reunioes[idx] = { id: idAtual, titulo, data, hora: payload.hora, duracao: payload.duracao, clienteId: payload.cliente_id, obs: payload.obs };
+  } else {
+    const row = await sbInsert('reunioes', payload);
+    if (row) reunioes.push(mapReuniao(row));
+    recalcNextId();
+  }
+  hideLoader();
   closeModal('modal-reuniao');
-  salvarDB();
   renderCalendario();
 }
 
-function excluirReuniao() {
+async function excluirReuniao() {
   const id = parseInt(document.getElementById('reu-id').value);
   if (!id || !confirm('Excluir esta reunião?')) return;
+  showLoader('🗑 Excluindo...');
+  await sbDelete('reunioes', id);
   reunioes = reunioes.filter(r => r.id !== id);
+  hideLoader();
   closeModal('modal-reuniao');
-  salvarDB();
   renderCalendario();
 }
-function initApp() {
-  // Carregar dados salvos do navegador
-  carregarDB();
+
+async function initApp() {
+  await carregarDB();
   updateClienteSelects();
   calTarefasSelecionadas = new Set(tarefas.map(t => t.id));
   renderDashFin();
