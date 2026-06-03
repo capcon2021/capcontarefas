@@ -52,7 +52,14 @@ body { font-family: 'Nunito', sans-serif; background: #f8f9fb; color: var(--gray
 .form-group input {
   width: 100%; padding: 12px 16px; border: 2px solid var(--border); border-radius: 10px;
   font-size: 14px; font-family: 'Nunito', sans-serif; transition: border-color .2s;
-  outline: none;
+  outline: none; color: #374151; background-color: #ffffff;
+}
+.form-group input:-webkit-autofill,
+.form-group input:-webkit-autofill:hover,
+.form-group input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #374151 !important;
+  -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
+  background-color: #ffffff !important;
 }
 .form-group input:focus { border-color: var(--orange); }
 .btn-login {
