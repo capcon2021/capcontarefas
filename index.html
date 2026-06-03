@@ -146,6 +146,7 @@ tr:hover td { background: #fafafa; }
 .badge-red { background: #fee2e2; color: #991b1b; }
 .badge-blue { background: #dbeafe; color: #1e40af; }
 .badge-gray { background: var(--gray-light); color: var(--gray); }
+.badge-yellow { background: #fef3c7; color: #92400e; }
 .badge-purple { background: #ede9fe; color: #5b21b6; }
 .badge-yellow { background: #fef3c7; color: #92400e; }
 
@@ -542,6 +543,7 @@ tr:hover td { background: #fafafa; }
             <div class="card" style="overflow:hidden;"><div id="cal-container"></div></div>
             <div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;">
               <div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;"><div style="width:11px;height:11px;border-radius:3px;background:#F47B20;"></div> Reunião</div>
+              <div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;"><div style="width:11px;height:11px;border-radius:3px;background:#f59e0b;"></div> Aniversário</div>
               <div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;"><div style="width:11px;height:11px;border-radius:3px;background:#3b82f6;"></div> Em Andamento</div>
               <div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;"><div style="width:11px;height:11px;border-radius:3px;background:#9ca3af;"></div> Não Iniciada</div>
               <div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;"><div style="width:11px;height:11px;border-radius:3px;background:#10b981;"></div> Concluída</div>
@@ -585,6 +587,48 @@ tr:hover td { background: #fafafa; }
         <div id="lista-usuarios" style="display:grid;gap:16px;"></div>
       </div>
 
+      <!-- ===== ANIVERSÁRIOS ===== -->
+      <div class="screen" id="screen-aniversarios">
+        <div class="page-header">
+          <div><div class="page-title">🎂 Aniversários</div><div class="page-sub">Aniversários dos clientes cadastrados</div></div>
+        </div>
+        <!-- Alertas do dia -->
+        <div id="aniv-alerta-container"></div>
+        <!-- Filtros -->
+        <div class="filters">
+          <select id="aniv-filtro-mes" onchange="renderAniversarios()">
+            <option value="">Todos os meses</option>
+            <option value="1">Janeiro</option><option value="2">Fevereiro</option>
+            <option value="3">Março</option><option value="4">Abril</option>
+            <option value="5">Maio</option><option value="6">Junho</option>
+            <option value="7">Julho</option><option value="8">Agosto</option>
+            <option value="9">Setembro</option><option value="10">Outubro</option>
+            <option value="11">Novembro</option><option value="12">Dezembro</option>
+          </select>
+          <input type="text" id="aniv-busca" placeholder="Buscar cliente..." oninput="renderAniversarios()" style="width:220px;">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start;">
+          <!-- Lista principal -->
+          <div class="card">
+            <div class="card-body">
+              <table>
+                <thead><tr><th>Cliente</th><th>Contato</th><th>Data de Aniversário</th><th>Próximo</th><th>Dias</th></tr></thead>
+                <tbody id="tb-aniversarios"></tbody>
+              </table>
+            </div>
+          </div>
+          <!-- Painel lateral: próximos 30 dias -->
+          <div>
+            <div class="card" style="overflow:hidden;">
+              <div class="card-header" style="background:var(--orange-light);">
+                <div class="card-title" style="color:var(--orange);">📅 Próximos 30 dias</div>
+              </div>
+              <div id="aniv-proximos" style="padding:12px;max-height:500px;overflow-y:auto;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div><!-- content -->
   </div><!-- main -->
 </div><!-- app -->
@@ -607,6 +651,7 @@ tr:hover td { background: #fafafa; }
       <div class="field"><label>Endereço / Cidade</label><input type="text" id="cli-endereco" placeholder="Cidade - UF"></div>
       <div class="field"><label>Valor Mensalidade (R$)</label><input type="number" id="cli-valor" placeholder="0,00" step="0.01"></div>
       <div class="field"><label>Dia de Vencimento</label><input type="number" id="cli-venc" placeholder="Ex: 10" min="1" max="31"></div>
+      <div class="field"><label>🎂 Data de Aniversário</label><input type="date" id="cli-aniversario" title="Aniversário do responsável ou fundação da empresa"></div>
       <div class="field" style="grid-column:1/-1"><label>Observações</label><textarea id="cli-obs" rows="2" placeholder="Informações adicionais..."></textarea></div>
     </div>
     <div class="modal-footer">
@@ -854,6 +899,7 @@ const ALL_SCREENS = [
   { id: 'dashboard-fin',   label: 'Dashboard Financeiro',  section: 'Principal'  },
   { id: 'calendario',      label: 'Calendário',            section: 'Principal'  },
   { id: 'clientes',        label: 'Clientes',              section: 'Principal'  },
+  { id: 'aniversarios',    label: 'Aniversários',          section: 'Principal'  },
   { id: 'mensalidades',    label: 'Mensalidades',          section: 'Financeiro' },
   { id: 'enviados',        label: 'Enviados ao Cliente',   section: 'Financeiro' },
   { id: 'recebidos',       label: 'Concluído',             section: 'Financeiro' },
@@ -909,7 +955,7 @@ async function sbDelete(table, id) {
 }
 
 // Mapear snake_case do banco → camelCase local
-function mapCliente(r) { return { id: r.id, nome: r.nome, contato: r.contato||'', whatsapp: r.whatsapp||'', email: r.email||'', cnpj: r.cnpj||'', endereco: r.endereco||'', valor: parseFloat(r.valor||0), vencimento: parseInt(r.vencimento||10), obs: r.obs||'' }; }
+function mapCliente(r) { return { id: r.id, nome: r.nome, contato: r.contato||'', whatsapp: r.whatsapp||'', email: r.email||'', cnpj: r.cnpj||'', endereco: r.endereco||'', valor: parseFloat(r.valor||0), vencimento: parseInt(r.vencimento||10), obs: r.obs||'', aniversario: r.aniversario||'' }; }
 function mapMens(r) { return { id: r.id, clienteId: r.cliente_id, desc: r.descricao||'', valor: parseFloat(r.valor||0), vencimento: r.vencimento||'', ref: r.referencia||'', status: r.status||'em_aberto', forma: r.forma||'', dataPagto: r.data_pagto||'', enviadoEm: r.enviado_em||'', concluidoEm: r.concluido_em||'' }; }
 function mapTarefa(r) { return { id: r.id, clienteId: r.cliente_id, nome: r.nome||'', desc: r.descricao||'', inicio: r.inicio||'', fim: r.fim||'', status: r.status||'nao_iniciado', prioridade: r.prioridade||'normal', tempoGasto: parseInt(r.tempo_gasto||0), timerRunning: false }; }
 function mapReuniao(r) { return { id: r.id, titulo: r.titulo||'', data: r.data||'', hora: r.hora||'', duracao: parseInt(r.duracao||60), clienteId: r.cliente_id||0, obs: r.obs||'' }; }
@@ -997,6 +1043,7 @@ const screenTitles = {
   'dashboard-fin': 'Dashboard Financeiro',
   'calendario': 'Calendário',
   'clientes': 'Clientes',
+  'aniversarios': '🎂 Aniversários',
   'mensalidades': 'Mensalidades – Em Aberto',
   'enviados': 'Enviados ao Cliente',
   'recebidos': 'Concluído',
@@ -1023,6 +1070,7 @@ function buildSidebar() {
     'dashboard-fin':   `<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>`,
     'calendario':      `<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>`,
     'clientes':        `<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>`,
+    'aniversarios':    `<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="M12 2v2"/><path d="M8 11l4-4 4 4"/>`,
     'mensalidades':    `<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/>`,
     'enviados':        `<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22,2 15,22 11,13 2,9 22,2"/>`,
     'recebidos':       `<polyline points="20,6 9,17 4,12"/>`,
@@ -1034,6 +1082,7 @@ function buildSidebar() {
   };
   const labels = {
     'dashboard-fin':'Dashboard Financeiro','calendario':'Calendário','clientes':'Clientes',
+    'aniversarios':'Aniversários',
     'mensalidades':'Lançar Mensalidades','enviados':'Enviados ao Cliente','recebidos':'Concluído',
     'tarefas':'Tarefas','projetos':'Projetos em Andamento','concluidas':'Tarefas Concluídas',
     'dashboard-tasks':'Dashboard Tarefas','usuarios':'Usuários e Permissões',
@@ -1088,6 +1137,7 @@ function showScreen(id) {
     'dashboard-fin': renderDashFin,
     'calendario': renderCalendario,
     'clientes': renderClientes,
+    'aniversarios': renderAniversarios,
     'mensalidades': renderMensalidades,
     'enviados': renderEnviados,
     'recebidos': renderRecebidos,
@@ -1383,6 +1433,7 @@ function openNovoCliente() {
   document.getElementById('modal-cliente-title').textContent = 'Novo Cliente';
   ['cli-nome','cli-contato','cli-whatsapp','cli-email','cli-cnpj','cli-endereco','cli-obs'].forEach(id => document.getElementById(id).value='');
   ['cli-valor','cli-venc'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('cli-aniversario').value = '';
   openModal('modal-cliente');
 }
 document.querySelector('[onclick="openModal(\'modal-cliente\')"]').onclick = openNovoCliente;
@@ -1399,6 +1450,7 @@ function editCliente(id) {
   document.getElementById('cli-endereco').value = c.endereco||'';
   document.getElementById('cli-valor').value = c.valor||'';
   document.getElementById('cli-venc').value = c.vencimento||'';
+  document.getElementById('cli-aniversario').value = c.aniversario||'';
   document.getElementById('cli-obs').value = c.obs||'';
   openModal('modal-cliente');
 }
@@ -1415,6 +1467,7 @@ function saveCliente() {
     endereco: document.getElementById('cli-endereco').value,
     valor: parseFloat(document.getElementById('cli-valor').value)||0,
     vencimento: parseInt(document.getElementById('cli-venc').value)||1,
+    aniversario: document.getElementById('cli-aniversario').value,
     obs: document.getElementById('cli-obs').value,
   };
   if (editingClienteId) {
@@ -2269,22 +2322,23 @@ function renderHojePanel() {
   const el = document.getElementById('cal-hoje-body');
   if (!el) return;
   const hoje = new Date().toISOString().split('T')[0];
-  const { reunioesDia, tarefasDia } = eventosNoDia(hoje);
-  if (reunioesDia.length === 0 && tarefasDia.length === 0) {
+  const { reunioesDia, tarefasDia, anivHoje } = eventosNoDia(hoje);
+  if (reunioesDia.length === 0 && tarefasDia.length === 0 && anivHoje.length === 0) {
     el.innerHTML = '<div style="color:var(--gray);text-align:center;padding:12px 0;">Nenhum evento hoje.</div>';
     return;
   }
   el.innerHTML = [
+    ...anivHoje.map(c => `<div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:8px;">
+      <div style="width:8px;height:8px;border-radius:50%;background:#f59e0b;margin-top:3px;flex-shrink:0;"></div>
+      <div><div style="font-weight:700;">🎂 ${c.nome}</div><div style="color:var(--gray);font-size:11px;">Aniversário!</div></div></div>`),
     ...reunioesDia.map(r => `<div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:8px;">
       <div style="width:8px;height:8px;border-radius:50%;background:#F47B20;margin-top:3px;flex-shrink:0;"></div>
       <div><div style="font-weight:700;">${r.hora} ${r.titulo}</div>
-      ${r.clienteId?`<div style="color:var(--gray);font-size:11px;">${getCliNome(r.clienteId)}</div>`:''}
-      </div></div>`),
+      ${r.clienteId?`<div style="color:var(--gray);font-size:11px;">${getCliNome(r.clienteId)}</div>`:''}</div></div>`),
     ...tarefasDia.map(t => `<div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:8px;">
       <div style="width:8px;height:8px;border-radius:50%;background:${corTarefa(t.status)};margin-top:3px;flex-shrink:0;"></div>
       <div><div style="font-weight:700;">📋 ${t.nome}</div>
-      <div style="color:var(--gray);font-size:11px;">${getCliNome(t.clienteId)}</div>
-      </div></div>`)
+      <div style="color:var(--gray);font-size:11px;">${getCliNome(t.clienteId)}</div></div></div>`)
   ].join('');
 }
 
@@ -2314,9 +2368,29 @@ function setCalView(v) {
   renderCalendario();
 }
 
+function aniversariosNoDia(dataStr) {
+  const [, mm, dd] = dataStr.split('-');
+  const amanha = new Date(dataStr+'T12:00');
+  amanha.setDate(amanha.getDate() + 1);
+  const amanhaStr = amanha.toISOString().split('T')[0];
+  const [, mmA, ddA] = amanhaStr.split('-');
+
+  return {
+    hoje: clientes.filter(c => {
+      if (!c.aniversario) return false;
+      const [, cm, cd] = c.aniversario.split('-');
+      return cm === mm && cd === dd;
+    }),
+    amanha: clientes.filter(c => {
+      if (!c.aniversario) return false;
+      const [, cm, cd] = c.aniversario.split('-');
+      return cm === mmA && cd === ddA;
+    }),
+  };
+}
+
 function eventosNoDia(dataStr) {
   const reunioesDia = reunioes.filter(r => r.data === dataStr);
-  // só mostra tarefas que estão selecionadas no filtro
   const tarefasDia = tarefas.filter(t => {
     if (!calTarefasSelecionadas.has(t.id)) return false;
     if (!t.inicio) return false;
@@ -2325,7 +2399,135 @@ function eventosNoDia(dataStr) {
     if (t.fim && t.inicio <= d && t.fim >= d) return true;
     return false;
   });
-  return { reunioesDia, tarefasDia };
+  const { hoje: anivHoje } = aniversariosNoDia(dataStr);
+  return { reunioesDia, tarefasDia, anivHoje };
+}
+
+// ============================================================
+// ANIVERSÁRIOS
+// ============================================================
+function diasParaAniversario(anivStr) {
+  if (!anivStr) return null;
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const [, mm, dd] = anivStr.split('-');
+  const ano = hoje.getFullYear();
+  let prox = new Date(ano, parseInt(mm)-1, parseInt(dd));
+  prox.setHours(0,0,0,0);
+  if (prox < hoje) prox = new Date(ano+1, parseInt(mm)-1, parseInt(dd));
+  return Math.round((prox - hoje) / 86400000);
+}
+
+function fmtAniv(anivStr) {
+  if (!anivStr) return '–';
+  const [, mm, dd] = anivStr.split('-');
+  const mesesNomes2 = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  return `${parseInt(dd)} de ${mesesNomes2[parseInt(mm)-1]}`;
+}
+
+function verificarAlertasAniversario() {
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const hojeStr = hoje.toISOString().split('T')[0];
+  const { hoje: anivHoje, amanha: anivAmanha } = aniversariosNoDia(hojeStr);
+
+  const container = document.getElementById('aniv-alerta-container');
+  if (!container) return;
+
+  let html = '';
+  anivHoje.forEach(c => {
+    html += `<div style="background:linear-gradient(135deg,#F47B20,#d46310);color:white;border-radius:12px;padding:14px 18px;
+      margin-bottom:12px;display:flex;align-items:center;gap:14px;box-shadow:0 4px 12px rgba(244,123,32,.3);">
+      <span style="font-size:28px;">🎂</span>
+      <div>
+        <div style="font-weight:800;font-size:15px;">Hoje é aniversário de ${c.nome}!</div>
+        <div style="font-size:12px;opacity:.9;">${c.contato||''} ${c.whatsapp?'· '+c.whatsapp:''}</div>
+      </div>
+      ${c.whatsapp?`<a href="https://wa.me/55${c.whatsapp.replace(/\D/g,'')}" target="_blank"
+        style="margin-left:auto;background:white;color:#F47B20;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:800;text-decoration:none;">
+        💬 WhatsApp</a>`:''}
+    </div>`;
+  });
+  anivAmanha.forEach(c => {
+    html += `<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:12px;padding:12px 18px;
+      margin-bottom:12px;display:flex;align-items:center;gap:14px;">
+      <span style="font-size:24px;">⏰</span>
+      <div>
+        <div style="font-weight:800;font-size:14px;color:#92400e;">Amanhã é aniversário de ${c.nome}!</div>
+        <div style="font-size:12px;color:#b45309;">${c.contato||''} ${c.whatsapp?'· '+c.whatsapp:''}</div>
+      </div>
+      ${c.whatsapp?`<a href="https://wa.me/55${c.whatsapp.replace(/\D/g,'')}" target="_blank"
+        style="margin-left:auto;background:#f59e0b;color:white;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:800;text-decoration:none;">
+        💬 WhatsApp</a>`:''}
+    </div>`;
+  });
+  container.innerHTML = html;
+}
+
+function renderAniversarios() {
+  verificarAlertasAniversario();
+  const filtroMes = parseInt(document.getElementById('aniv-filtro-mes')?.value)||0;
+  const busca = (document.getElementById('aniv-busca')?.value||'').toLowerCase();
+
+  const comAniv = clientes.filter(c => {
+    if (!c.aniversario) return false;
+    if (busca && !c.nome.toLowerCase().includes(busca)) return false;
+    if (filtroMes) {
+      const [, mm] = c.aniversario.split('-');
+      if (parseInt(mm) !== filtroMes) return false;
+    }
+    return true;
+  });
+
+  // Ordenar por dias faltando
+  comAniv.sort((a,b) => (diasParaAniversario(a.aniversario)||999) - (diasParaAniversario(b.aniversario)||999));
+
+  const tb = document.getElementById('tb-aniversarios');
+  if (!comAniv.length) {
+    tb.innerHTML = `<tr><td colspan="5"><div class="empty-state"><p>Nenhum aniversário cadastrado${filtroMes?' neste mês':''}.<br><small>Edite um cliente e preencha a data de aniversário.</small></p></div></td></tr>`;
+  } else {
+    tb.innerHTML = comAniv.map(c => {
+      const dias = diasParaAniversario(c.aniversario);
+      let diasBadge = '';
+      if (dias === 0) diasBadge = `<span class="badge badge-orange">🎂 Hoje!</span>`;
+      else if (dias === 1) diasBadge = `<span class="badge badge-yellow">⏰ Amanhã</span>`;
+      else if (dias <= 7) diasBadge = `<span class="badge badge-blue">Em ${dias}d</span>`;
+      else diasBadge = `<span class="badge badge-gray">${dias}d</span>`;
+
+      return `<tr>
+        <td><strong>${c.nome}</strong></td>
+        <td>${c.contato||'–'}</td>
+        <td>🎂 ${fmtAniv(c.aniversario)}</td>
+        <td>${fmtAniv(c.aniversario)} ${new Date().getFullYear() + (diasParaAniversario(c.aniversario) === 0 ? 0 : (new Date().getMonth()+1 > parseInt(c.aniversario.split('-')[1]) ? 1 : 0))}</td>
+        <td>${diasBadge}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Painel lateral: próximos 30 dias
+  const proximos = clientes.filter(c => {
+    if (!c.aniversario) return false;
+    const d = diasParaAniversario(c.aniversario);
+    return d !== null && d <= 30;
+  }).sort((a,b) => diasParaAniversario(a.aniversario) - diasParaAniversario(b.aniversario));
+
+  const panel = document.getElementById('aniv-proximos');
+  if (!proximos.length) {
+    panel.innerHTML = '<div style="color:var(--gray);font-size:13px;text-align:center;padding:16px;">Nenhum nos próximos 30 dias.</div>';
+  } else {
+    panel.innerHTML = proximos.map(c => {
+      const dias = diasParaAniversario(c.aniversario);
+      const cor = dias === 0 ? '#F47B20' : dias === 1 ? '#f59e0b' : dias <= 7 ? '#3b82f6' : '#10b981';
+      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f3f4f6;">
+        <div style="width:36px;height:36px;border-radius:50%;background:${cor}22;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;">🎂</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.nome}</div>
+          <div style="font-size:11px;color:var(--gray);">${fmtAniv(c.aniversario)}</div>
+        </div>
+        <div style="font-size:12px;font-weight:800;color:${cor};flex-shrink:0;">
+          ${dias === 0 ? 'Hoje!' : dias === 1 ? 'Amanhã' : 'Em '+dias+'d'}
+        </div>
+      </div>`;
+    }).join('');
+  }
 }
 
 function corTarefa(status) {
@@ -2359,8 +2561,8 @@ function renderCalMes() {
     const dt = new Date(calAno, calMes, d); dt.setHours(0,0,0,0);
     const isHoje = dt.getTime() === hoje.getTime();
     const isDom = dt.getDay() === 0;
-    const { reunioesDia, tarefasDia } = eventosNoDia(dataStr);
-    const totalExtra = (reunioesDia.length + tarefasDia.length) - 2;
+    const { reunioesDia, tarefasDia, anivHoje } = eventosNoDia(dataStr);
+    const totalExtra = (reunioesDia.length + tarefasDia.length + anivHoje.length) - 2;
 
     html += `<div onclick="abrirDia('${dataStr}')"
       style="min-height:88px;padding:5px;border-right:1px solid #f3f4f6;border-bottom:1px solid #f3f4f6;
@@ -2373,11 +2575,15 @@ function renderCalMes() {
         </span>
         ${totalExtra > 0 ? `<span style="font-size:10px;color:var(--gray);font-weight:700;">+${totalExtra}</span>` : ''}
       </div>
-      ${reunioesDia.slice(0,2).map(r => `
+      ${anivHoje.slice(0,1).map(c => `
+        <div style="background:#f59e0b;color:white;border-radius:3px;padding:1px 4px;font-size:10px;font-weight:700;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">
+          🎂 ${c.nome.split(' ')[0]}
+        </div>`).join('')}
+      ${reunioesDia.slice(0, anivHoje.length?1:2).map(r => `
         <div style="background:#F47B20;color:white;border-radius:3px;padding:1px 4px;font-size:10px;font-weight:700;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">
           ${r.hora?r.hora.slice(0,5)+' ':''}${r.titulo}
         </div>`).join('')}
-      ${tarefasDia.slice(0, Math.max(0, 2 - reunioesDia.length)).map(t => `
+      ${tarefasDia.slice(0, Math.max(0, 2 - (anivHoje.length?1:0) - reunioesDia.length)).map(t => `
         <div style="background:${corTarefa(t.status)};color:white;border-radius:3px;padding:1px 4px;font-size:10px;font-weight:700;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">
           &#128203; ${t.nome}
         </div>`).join('')}
@@ -2413,11 +2619,15 @@ function renderCalSemana() {
   html += `</div><div style="display:grid;grid-template-columns:repeat(7,1fr);">`;
   dias.forEach(d => {
     const dataStr = d.toISOString().split('T')[0];
-    const { reunioesDia, tarefasDia } = eventosNoDia(dataStr);
+    const { reunioesDia, tarefasDia, anivHoje } = eventosNoDia(dataStr);
     const isHoje = d.getTime() === hoje.getTime();
     html += `<div onclick="abrirDia('${dataStr}')"
       style="min-height:150px;padding:6px;border-right:1px solid #f3f4f6;cursor:pointer;${isHoje?'background:#fff8f3;':''}"
       onmouseover="this.style.background='#fff8f3'" onmouseout="this.style.background='${isHoje?'#fff8f3':'white'}'">
+      ${anivHoje.map(c => `
+        <div style="background:#f59e0b;color:white;border-radius:4px;padding:3px 5px;font-size:11px;font-weight:700;margin-bottom:3px;">
+          🎂 ${c.nome.split(' ')[0]}
+        </div>`).join('')}
       ${reunioesDia.map(r => `
         <div style="background:#F47B20;color:white;border-radius:4px;padding:3px 5px;font-size:11px;font-weight:700;margin-bottom:3px;cursor:pointer;"
           onclick="event.stopPropagation();editarReuniao(${r.id})">
@@ -2438,17 +2648,24 @@ function abrirDia(dataStr) {
   document.getElementById('modal-dia-titulo').textContent =
     `${dt.getDate()} de ${mesesNomes[dt.getMonth()]} de ${dt.getFullYear()}`;
   document.getElementById('modal-dia-data').value = dataStr;
-  const { reunioesDia, tarefasDia } = eventosNoDia(dataStr);
-  // Para o modal do dia mostra TODAS as tarefas do dia, independente do filtro
+  const { reunioesDia, anivHoje } = eventosNoDia(dataStr);
   const todasTarefasDia = tarefas.filter(t => {
     if (!t.inicio) return false;
     return t.inicio === dataStr || (t.fim && t.inicio <= dataStr && t.fim >= dataStr);
   });
 
   let html = '';
-  if (reunioesDia.length === 0 && todasTarefasDia.length === 0) {
+  if (reunioesDia.length === 0 && todasTarefasDia.length === 0 && anivHoje.length === 0) {
     html = '<div style="padding:24px;text-align:center;color:var(--gray);font-size:13px;">Nenhum evento neste dia.</div>';
   }
+  anivHoje.forEach(c => {
+    html += `<div style="border-left:4px solid #f59e0b;padding:10px 14px;margin-bottom:8px;background:#fef3c7;border-radius:0 8px 8px 0;">
+      <div style="font-weight:800;font-size:13px;margin-bottom:3px;">🎂 Aniversário de ${c.nome}!</div>
+      ${c.contato?`<div style="font-size:12px;color:var(--gray);">👤 ${c.contato}</div>`:''}
+      ${c.whatsapp?`<a href="https://wa.me/55${c.whatsapp.replace(/\D/g,'')}" target="_blank"
+        class="btn btn-sm" style="margin-top:6px;background:#25d366;color:white;font-size:11px;">💬 Parabenizar no WhatsApp</a>`:''}
+    </div>`;
+  });
   reunioesDia.forEach(r => {
     html += `<div style="border-left:4px solid #F47B20;padding:10px 14px;margin-bottom:8px;background:#fff8f3;border-radius:0 8px 8px 0;">
       <div style="font-weight:800;font-size:13px;margin-bottom:3px;">&#128197; ${r.titulo}</div>
@@ -2544,10 +2761,11 @@ function excluirReuniao() {
 }
 function initApp() {
   updateClienteSelects();
-  // Inicializa o set de tarefas visíveis no calendário com todas
   calTarefasSelecionadas = new Set(tarefas.map(t => t.id));
   renderDashFin();
   refreshAllMens();
+  // Verificar aniversários ao entrar no sistema
+  setTimeout(verificarAlertasAniversario, 500);
   const dfAno = document.getElementById('df-ano');
   if (dfAno) dfAno.value = '';
   const dtAno = document.getElementById('dt-ano');
