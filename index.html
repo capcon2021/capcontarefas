@@ -926,9 +926,9 @@ function loadUsers() {
     if (saved) return JSON.parse(saved);
   } catch(e) {}
   return {
-    admin:      { pass: 'S,kyar@_2025', name: 'Administrador', isAdmin: true,  screens: ALL_SCREENS.map(s=>s.id) },
-    gestor:     { pass: 'cap123',       name: 'Gestor',         isAdmin: false, screens: ALL_SCREENS.map(s=>s.id) },
-    financeiro: { pass: 'fin123',       name: 'Financeiro',     isAdmin: false, screens: ['dashboard-fin','mensalidades','enviados','recebidos'] },
+    admin:      { pass: 'cap2025',  name: 'Administrador', isAdmin: true,  screens: ALL_SCREENS.map(s=>s.id) },
+    gestor:     { pass: 'cap123',   name: 'Gestor',         isAdmin: false, screens: ALL_SCREENS.map(s=>s.id) },
+    financeiro: { pass: 'fin123',   name: 'Financeiro',     isAdmin: false, screens: ['dashboard-fin','mensalidades','enviados','recebidos'] },
   };
 }
 function saveUsers(users) {
@@ -1028,12 +1028,22 @@ function hideLoader() { const el = document.getElementById('sb-loader'); if(el) 
 function toggleSenha() {
   const inp = document.getElementById('inp-pass');
   const icon = document.getElementById('eye-icon');
-  if (inp.type === 'password') {
-    inp.type = 'text';
-    icon.innerHTML = `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>`;
+  const novoTipo = inp.type === 'password' ? 'text' : 'password';
+  const val = inp.value;
+  const novo = document.createElement('input');
+  novo.type = novoTipo;
+  novo.id = 'inp-pass';
+  novo.placeholder = 'Digite sua senha';
+  novo.autocomplete = 'current-password';
+  novo.value = val;
+  novo.style.cssText = 'width:100%;padding:12px 44px 12px 16px;border:2px solid var(--border);border-radius:10px;font-size:14px;font-family:Nunito,sans-serif;outline:none;color:#374151;background-color:#ffffff;box-sizing:border-box;';
+  novo.addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
+  inp.replaceWith(novo);
+  novo.focus();
+  if (novoTipo === 'text') {
+    icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
   } else {
-    inp.type = 'password';
-    icon.innerHTML = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>`;
+    icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
   }
 }
 
@@ -1043,11 +1053,17 @@ function toggleSenha() {
     const saved = localStorage.getItem('cap_login');
     if (saved) {
       const { user, pass } = JSON.parse(saved);
-      document.getElementById('inp-user').value = user || '';
-      document.getElementById('inp-pass').value = pass || '';
-      document.getElementById('lembrar-senha').checked = true;
+      // Só preenche se as credenciais ainda são válidas
+      if (user && USERS[user] && USERS[user].pass === pass) {
+        document.getElementById('inp-user').value = user || '';
+        document.getElementById('inp-pass').value = pass || '';
+        document.getElementById('lembrar-senha').checked = true;
+      } else {
+        // Credenciais antigas/inválidas — limpa
+        localStorage.removeItem('cap_login');
+      }
     }
-  } catch(e) {}
+  } catch(e) { localStorage.removeItem('cap_login'); }
 })();
 
 function doLogin() {
