@@ -919,20 +919,34 @@ const ALL_SCREENS = [
   { id: 'dashboard-tasks', label: 'Dashboard Tarefas',     section: 'Projetos'   },
 ];
 
+// Versão dos usuários padrão — altere este número para forçar reset
+const USERS_VERSION = 2;
+
+const USERS_DEFAULT = {
+  admin:      { pass: 'cap2025',  name: 'Administrador', isAdmin: true,  screens: ALL_SCREENS.map(s=>s.id) },
+  gestor:     { pass: 'cap123',   name: 'Gestor',         isAdmin: false, screens: ALL_SCREENS.map(s=>s.id) },
+  financeiro: { pass: 'fin123',   name: 'Financeiro',     isAdmin: false, screens: ['dashboard-fin','mensalidades','enviados','recebidos'] },
+};
+
 // Carregar usuários do localStorage (ou usar padrão)
 function loadUsers() {
   try {
+    const vSaved = parseInt(localStorage.getItem('cap_users_version') || '0');
+    if (vSaved < USERS_VERSION) {
+      // Versão antiga ou sem versão — reseta para os defaults
+      localStorage.removeItem('cap_users');
+      localStorage.removeItem('cap_login');
+      localStorage.setItem('cap_users_version', String(USERS_VERSION));
+      return JSON.parse(JSON.stringify(USERS_DEFAULT));
+    }
     const saved = localStorage.getItem('cap_users');
     if (saved) return JSON.parse(saved);
   } catch(e) {}
-  return {
-    admin:      { pass: 'cap2025',  name: 'Administrador', isAdmin: true,  screens: ALL_SCREENS.map(s=>s.id) },
-    gestor:     { pass: 'cap123',   name: 'Gestor',         isAdmin: false, screens: ALL_SCREENS.map(s=>s.id) },
-    financeiro: { pass: 'fin123',   name: 'Financeiro',     isAdmin: false, screens: ['dashboard-fin','mensalidades','enviados','recebidos'] },
-  };
+  return JSON.parse(JSON.stringify(USERS_DEFAULT));
 }
 function saveUsers(users) {
   localStorage.setItem('cap_users', JSON.stringify(users));
+  localStorage.setItem('cap_users_version', String(USERS_VERSION));
 }
 let USERS = loadUsers();
 
@@ -1067,9 +1081,19 @@ function toggleSenha() {
 })();
 
 function doLogin() {
-  const user = document.getElementById('inp-user').value.trim().toLowerCase();
-  const pass = document.getElementById('inp-pass').value.trim();
+  const userEl = document.getElementById('inp-user');
+  const passEl = document.getElementById('inp-pass');
+  if (!userEl || !passEl) { alert('Erro: campos de login não encontrados.'); return; }
+
+  const user = userEl.value.trim().toLowerCase();
+  const pass = passEl.value; // SEM .trim() para preservar espaços na senha
   const lembrar = document.getElementById('lembrar-senha').checked;
+
+  if (!user || !pass) {
+    document.getElementById('login-error').style.display = 'block';
+    document.getElementById('login-error').textContent = 'Preencha usuário e senha.';
+    return;
+  }
 
   if (lembrar) {
     localStorage.setItem('cap_login', JSON.stringify({ user, pass }));
@@ -1088,9 +1112,16 @@ function doLogin() {
     initApp();
   } else {
     document.getElementById('login-error').style.display = 'block';
+    document.getElementById('login-error').textContent = 'Usuário ou senha incorretos.';
   }
 }
-document.getElementById('inp-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+// Listener de Enter no login — usando document para sobreviver à recriação do campo
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && document.getElementById('login-screen') &&
+      document.getElementById('login-screen').style.display !== 'none') {
+    doLogin();
+  }
+});
 
 function doLogout() {
   Object.values(timerIntervals).forEach(clearInterval);
