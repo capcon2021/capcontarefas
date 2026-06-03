@@ -961,6 +961,35 @@ function mapTarefa(r) { return { id: r.id, clienteId: r.cliente_id, nome: r.nome
 function mapReuniao(r) { return { id: r.id, titulo: r.titulo||'', data: r.data||'', hora: r.hora||'', duracao: parseInt(r.duracao||60), clienteId: r.cliente_id||0, obs: r.obs||'' }; }
 
 // Estado local (espelho em memória do banco)
+// ============================================================
+// PERSISTÊNCIA LOCAL (localStorage) — dados salvos no navegador
+// ============================================================
+const DB_KEY = 'cap_gestao_db';
+
+function salvarDB() {
+  try {
+    localStorage.setItem(DB_KEY, JSON.stringify({
+      clientes, mensalidades, tarefas, reunioes,
+      nextId, nextReuId: nextReuId
+    }));
+  } catch(e) { console.warn('Erro ao salvar:', e); }
+}
+
+function carregarDB() {
+  try {
+    const raw = localStorage.getItem(DB_KEY);
+    if (!raw) return false;
+    const db = JSON.parse(raw);
+    clientes    = db.clientes    || [];
+    mensalidades = db.mensalidades || [];
+    tarefas     = (db.tarefas    || []).map(t => ({ ...t, timerRunning: false }));
+    reunioes    = db.reunioes    || [];
+    nextId      = db.nextId      || { cli: 1, mens: 1, tar: 1 };
+    nextReuId   = db.nextReuId   || 1;
+    return true;
+  } catch(e) { console.warn('Erro ao carregar:', e); return false; }
+}
+
 let clientes = [];
 let mensalidades = [];
 let tarefas = [];
@@ -1346,7 +1375,8 @@ function toggleUsrSenha() {
 // ============================================================
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); }));
+// Fechar modal apenas pelo botão X ou Cancelar — não pelo clique fora
+// (evita fechar ao clicar em botões dentro de tabelas/kanban)
 
 // ============================================================
 // HELPERS
@@ -1478,12 +1508,14 @@ function saveCliente() {
   }
   closeModal('modal-cliente');
   updateClienteSelects();
+  salvarDB();
   renderClientes();
 }
 
 function deleteCliente(id) {
   if (!confirm('Excluir este cliente?')) return;
   clientes = clientes.filter(c => c.id !== id);
+  salvarDB();
   updateClienteSelects();
   renderClientes();
 }
@@ -1532,6 +1564,7 @@ function saveMensalidade() {
     forma: '', dataPagto: '', enviadoEm: '', concluidoEm: ''
   });
   closeModal('modal-mensalidade');
+  salvarDB();
   renderMensalidades();
   renderDashFin();
 }
@@ -1632,6 +1665,7 @@ function renderRecebidos() {
 }
 
 function refreshAllMens() {
+  salvarDB();
   renderMensalidades();
   renderEnviados();
   renderRecebidos();
@@ -1751,6 +1785,7 @@ function moverKanban(id, novoStatus) {
   if (novoStatus === 'em_andamento' && !t.inicio) {
     t.inicio = new Date().toISOString().split('T')[0];
   }
+  salvarDB();
   renderProjetos();
   renderTarefas();
   renderConcluidas();
@@ -1759,21 +1794,21 @@ function moverKanban(id, novoStatus) {
 
 function kanbanEditNome(id, nome) {
   const t = tarefas.find(x=>x.id===id);
-  if (t && nome) { t.nome = nome; renderTarefas(); }
+  if (t && nome) { t.nome = nome; salvarDB(); renderTarefas(); }
 }
 
 function kanbanEditData(id, campo, valor) {
   const t = tarefas.find(x=>x.id===id);
   if (!t) return;
   t[campo] = valor;
-  // recalcular lead time no card sem re-renderizar tudo
+  salvarDB();
   renderProjetos();
   renderTarefas();
 }
 
 function kanbanEditPrioridade(id, val) {
   const t = tarefas.find(x=>x.id===id);
-  if (t) { t.prioridade = val; renderProjetos(); renderTarefas(); }
+  if (t) { t.prioridade = val; salvarDB(); renderProjetos(); renderTarefas(); }
 }
 
 // ============================================================
@@ -2019,6 +2054,7 @@ function concluirTarefa(id) {
   }
   t.status = 'concluido';
   if (!t.fim) t.fim = new Date().toISOString().split('T')[0];
+  salvarDB();
   renderTarefas();
   renderConcluidas();
   renderProjetos();
@@ -2050,6 +2086,8 @@ function startTimerInterval(id) {
     t.tempoGasto++;
     const el = document.getElementById('timer-'+id);
     if (el) el.textContent = fmtTempo(t.tempoGasto);
+    // Salvar a cada 30 segundos
+    if (t.tempoGasto % 30 === 0) salvarDB();
   }, 1000);
 }
 
@@ -2076,6 +2114,7 @@ function saveTarefa() {
   }
   editingTarefaId = null;
   closeModal('modal-tarefa');
+  salvarDB();
   renderTarefas(); renderProjetos(); renderConcluidas(); renderDashTasks();
 }
 
@@ -2097,6 +2136,7 @@ function deleteTarefa(id) {
   if (!confirm('Excluir tarefa?')) return;
   if (timerIntervals[id]) { clearInterval(timerIntervals[id]); delete timerIntervals[id]; }
   tarefas = tarefas.filter(t=>t.id!==id);
+  salvarDB();
   renderTarefas(); renderProjetos(); renderConcluidas();
 }
 
@@ -2269,12 +2309,8 @@ function renderDashTasks() {
 // ============================================================
 // CALENDÁRIO
 // ============================================================
-let reunioes = [
-  { id: 1, titulo: 'Alinhamento mensal Alpha', data: '2026-06-08', hora: '10:00', duracao: 60, clienteId: 1, obs: 'Pauta: relatórios e próximos passos' },
-  { id: 2, titulo: 'Apresentação de sistema Beta', data: '2026-06-15', hora: '14:00', duracao: 90, clienteId: 2, obs: '' },
-  { id: 3, titulo: 'Reunião interna CAP', data: '2026-06-22', hora: '09:00', duracao: 60, clienteId: 0, obs: 'Planejamento trimestral' },
-];
-let nextReuId = 4;
+let reunioes = [];
+let nextReuId = 1;
 let calAno = new Date().getFullYear();
 let calMes = new Date().getMonth();
 let calView = 'mes';
@@ -2749,6 +2785,7 @@ function salvarReuniao() {
   if (idAtual) { const idx = reunioes.findIndex(r => r.id === idAtual); reunioes[idx] = obj; }
   else { reunioes.push(obj); }
   closeModal('modal-reuniao');
+  salvarDB();
   renderCalendario();
 }
 
@@ -2757,14 +2794,16 @@ function excluirReuniao() {
   if (!id || !confirm('Excluir esta reunião?')) return;
   reunioes = reunioes.filter(r => r.id !== id);
   closeModal('modal-reuniao');
+  salvarDB();
   renderCalendario();
 }
 function initApp() {
+  // Carregar dados salvos do navegador
+  carregarDB();
   updateClienteSelects();
   calTarefasSelecionadas = new Set(tarefas.map(t => t.id));
   renderDashFin();
   refreshAllMens();
-  // Verificar aniversários ao entrar no sistema
   setTimeout(verificarAlertasAniversario, 500);
   const dfAno = document.getElementById('df-ano');
   if (dfAno) dfAno.value = '';
