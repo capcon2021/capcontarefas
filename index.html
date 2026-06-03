@@ -367,7 +367,7 @@ tr:hover td { background: #fafafa; }
       <div class="screen" id="screen-mensalidades">
         <div class="page-header">
           <div><div class="page-title">Mensalidades</div><div class="page-sub">Lançamento e controle</div></div>
-          <button class="btn btn-primary" onclick="openModal('modal-mensalidade')">
+          <button class="btn btn-primary" onclick="novaMensalidade()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Novo Lançamento
           </button>
@@ -472,7 +472,7 @@ tr:hover td { background: #fafafa; }
         <div class="card">
           <div class="card-body">
             <table>
-              <thead><tr><th>Cliente</th><th>Tarefa</th><th>Início</th><th>Conclusão</th><th>Lead Time</th><th>Tempo Gasto</th></tr></thead>
+              <thead><tr><th>Cliente</th><th>Tarefa</th><th>Início</th><th>Conclusão</th><th>Lead Time</th><th>Tempo Gasto</th><th>Ações</th></tr></thead>
               <tbody id="tb-concluidas"></tbody>
             </table>
           </div>
@@ -665,7 +665,7 @@ tr:hover td { background: #fafafa; }
 <div class="modal-overlay" id="modal-mensalidade">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title">Novo Lançamento de Mensalidade</div>
+      <div class="modal-title" id="modal-mens-title">Novo Lançamento de Mensalidade</div>
       <button class="modal-close" onclick="closeModal('modal-mensalidade')">✕</button>
     </div>
     <div class="form-grid">
@@ -684,7 +684,7 @@ tr:hover td { background: #fafafa; }
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-mensalidade')">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveMensalidade()">Lançar Mensalidade</button>
+      <button class="btn btn-primary" id="btn-save-mens" onclick="saveMensalidade()">Lançar Mensalidade</button>
     </div>
   </div>
 </div>
@@ -929,6 +929,7 @@ let USERS = loadUsers();
 let currentUser = null;
 let editingClienteId = null;
 let editingTarefaId = null;
+let editingMensId = null;
 let timerIntervals = {};
 
 // Sample data
@@ -1547,8 +1548,21 @@ function renderMensalidades() {
         <button class="btn btn-primary btn-sm" onclick="marcarEnviado(${m.id})" title="Marcar como Enviado ao Cliente">
           📤 Enviar ao Cliente
         </button>
+        <button class="btn btn-sm" style="background:#ede9fe;color:#5b21b6;border:none;" onclick="editMensalidade(${m.id})" title="Editar">✏️</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteMensalidade(${m.id})" title="Excluir">🗑</button>
       </div></td>
     </tr>`).join('');
+}
+
+function novaMensalidade() {
+  editingMensId = null;
+  document.getElementById('modal-mens-title').textContent = 'Novo Lançamento de Mensalidade';
+  document.getElementById('btn-save-mens').textContent = 'Lançar Mensalidade';
+  updateClienteSelects();
+  ['mens-desc','mens-venc','mens-ref'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('mens-cliente').value='';
+  document.getElementById('mens-valor').value='';
+  openModal('modal-mensalidade');
 }
 
 function saveMensalidade() {
@@ -1557,16 +1571,51 @@ function saveMensalidade() {
   const valor = parseFloat(document.getElementById('mens-valor').value);
   const venc = document.getElementById('mens-venc').value;
   if (!cid||!desc||!valor||!venc) { alert('Preencha os campos obrigatórios.'); return; }
-  mensalidades.push({
-    id: nextId.mens++, clienteId: cid, desc, valor, vencimento: venc,
-    ref: document.getElementById('mens-ref').value,
-    status: 'em_aberto',   // sempre inicia em aberto
-    forma: '', dataPagto: '', enviadoEm: '', concluidoEm: ''
-  });
+  const ref = document.getElementById('mens-ref').value;
+  if (editingMensId) {
+    const idx = mensalidades.findIndex(m=>m.id===editingMensId);
+    if (idx>=0) {
+      mensalidades[idx].clienteId = cid;
+      mensalidades[idx].desc = desc;
+      mensalidades[idx].valor = valor;
+      mensalidades[idx].vencimento = venc;
+      mensalidades[idx].ref = ref;
+    }
+    editingMensId = null;
+  } else {
+    mensalidades.push({
+      id: nextId.mens++, clienteId: cid, desc, valor, vencimento: venc,
+      ref,
+      status: 'em_aberto',
+      forma: '', dataPagto: '', enviadoEm: '', concluidoEm: ''
+    });
+  }
+  document.getElementById('modal-mens-title').textContent = 'Novo Lançamento de Mensalidade';
+  document.getElementById('btn-save-mens').textContent = 'Lançar Mensalidade';
   closeModal('modal-mensalidade');
   salvarDB();
   renderMensalidades();
   renderDashFin();
+}
+
+function editMensalidade(id) {
+  editingMensId = id;
+  const m = mensalidades.find(x=>x.id===id);
+  document.getElementById('modal-mens-title').textContent = 'Editar Lançamento';
+  document.getElementById('btn-save-mens').textContent = 'Salvar Alterações';
+  updateClienteSelects();
+  document.getElementById('mens-cliente').value = m.clienteId;
+  document.getElementById('mens-desc').value = m.desc;
+  document.getElementById('mens-valor').value = m.valor;
+  document.getElementById('mens-venc').value = m.vencimento;
+  document.getElementById('mens-ref').value = m.ref||'';
+  openModal('modal-mensalidade');
+}
+
+function deleteMensalidade(id) {
+  if (!confirm('Excluir este lançamento?')) return;
+  mensalidades = mensalidades.filter(m=>m.id!==id);
+  refreshAllMens();
 }
 
 // Passo 1: Em Aberto → Enviado ao Cliente
@@ -1597,7 +1646,9 @@ function renderEnviados() {
         <button class="btn btn-success btn-sm" onclick="abrirCobranca(${m.id})" title="Marcar pagamento recebido">
           ✓ Pago
         </button>
-        <button class="btn btn-secondary btn-sm" onclick="voltarAberto(${m.id})" title="Voltar para Em Aberto">↩</button>
+        <button class="btn btn-secondary btn-sm" onclick="voltarAberto(${m.id})" title="Voltar para Em Aberto">↩ Reverter</button>
+        <button class="btn btn-sm" style="background:#ede9fe;color:#5b21b6;border:none;" onclick="editMensalidade(${m.id})" title="Editar">✏️</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteMensalidade(${m.id})" title="Excluir">🗑</button>
       </div></td>
     </tr>`).join('');
 }
@@ -1638,6 +1689,16 @@ function voltarAberto(id) {
   refreshAllMens();
 }
 
+function voltarEnviado(id) {
+  if (!confirm('Reverter este pagamento para "Enviado ao Cliente"?')) return;
+  const m = mensalidades.find(x=>x.id===id);
+  m.status = 'enviado';
+  m.forma = '';
+  m.dataPagto = '';
+  m.concluidoEm = '';
+  refreshAllMens();
+}
+
 // ============================================================
 // CONCLUÍDO (recebidos)
 // ============================================================
@@ -1660,6 +1721,9 @@ function renderRecebidos() {
       <td><span class="badge badge-gray">${(m.forma||'–').toUpperCase()}</span></td>
       <td><div class="action-row">
         <button class="btn btn-sm btn-secondary" onclick="gerarRecibo(${m.id})">📄 Recibo</button>
+        <button class="btn btn-secondary btn-sm" onclick="voltarEnviado(${m.id})" title="Reverter para Enviado">↩ Reverter</button>
+        <button class="btn btn-sm" style="background:#ede9fe;color:#5b21b6;border:none;" onclick="editMensalidade(${m.id})" title="Editar">✏️</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteMensalidade(${m.id})" title="Excluir">🗑</button>
       </div></td>
     </tr>`).join('');
 }
@@ -2140,6 +2204,15 @@ function deleteTarefa(id) {
   renderTarefas(); renderProjetos(); renderConcluidas();
 }
 
+function reabrirTarefa(id) {
+  if (!confirm('Reverter tarefa para "Em Andamento"?')) return;
+  const t = tarefas.find(x=>x.id===id);
+  if (!t) return;
+  t.status = 'em_andamento';
+  salvarDB();
+  renderTarefas(); renderProjetos(); renderConcluidas(); renderDashTasks();
+}
+
 // New tarefa button
 document.querySelector('[onclick="openModal(\'modal-tarefa\')"]').onclick = () => {
   editingTarefaId = null;
@@ -2158,7 +2231,7 @@ document.querySelector('[onclick="openModal(\'modal-tarefa\')"]').onclick = () =
 function renderConcluidas() {
   const rows = tarefas.filter(t=>t.status==='concluido');
   const tb = document.getElementById('tb-concluidas');
-  if (!rows.length) { tb.innerHTML='<tr><td colspan="6" class="empty-state">Nenhuma tarefa concluída.</td></tr>'; return; }
+  if (!rows.length) { tb.innerHTML='<tr><td colspan="8" class="empty-state">Nenhuma tarefa concluída.</td></tr>'; return; }
   tb.innerHTML = rows.map(t=>`
     <tr>
       <td>${getCliNome(t.clienteId)}</td>
@@ -2167,6 +2240,11 @@ function renderConcluidas() {
       <td>${t.fim?fmtDate(t.fim):'–'}</td>
       <td>${leadTime(t.inicio,t.fim)}</td>
       <td><span class="timer-display" style="font-size:13px;">${fmtTempo(t.tempoGasto)}</span></td>
+      <td><div class="action-row">
+        <button class="btn btn-sm btn-secondary" onclick="reabrirTarefa(${t.id})" title="Reverter para Em Andamento">↩ Reverter</button>
+        <button class="btn btn-sm" style="background:#ede9fe;color:#5b21b6;border:none;" onclick="editTarefa(${t.id})" title="Editar">✏️</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteTarefa(${t.id})" title="Excluir">🗑</button>
+      </div></td>
     </tr>`).join('');
 }
 
