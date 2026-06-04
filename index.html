@@ -1496,7 +1496,7 @@ async function saveCliente() {
     email: document.getElementById('cli-email').value,
     cnpj: document.getElementById('cli-cnpj').value,
     endereco: document.getElementById('cli-endereco').value,
-    valor: parseFloat(document.getElementById('cli-valor').value)||0,
+    valor: parseFloat((document.getElementById('cli-valor')||{value:'0'}).value)||0,
     vencimento: parseInt(document.getElementById('cli-venc').value)||1,
     aniversario: document.getElementById('cli-aniversario').value,
     obs: document.getElementById('cli-obs').value,
