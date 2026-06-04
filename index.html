@@ -954,9 +954,9 @@ async function sbInsert(table, data) {
   try {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(data) });
     const body = await r.json();
-    if (!r.ok) { console.error('sbInsert erro:', table, body); return null; }
+    if (!r.ok) { alert('Erro Supabase (' + table + '): ' + JSON.stringify(body)); return null; }
     return Array.isArray(body) ? body[0] : body;
-  } catch(e) { console.error('sbInsert falhou:', table, e); return null; }
+  } catch(e) { alert('Erro conexao: ' + e.message); return null; }
 }
 async function sbUpdate(table, id, data) {
   try {
