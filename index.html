@@ -1487,11 +1487,10 @@ function editCliente(id) {
   openModal('modal-cliente');
 }
 
-function saveCliente() {
+async function saveCliente() {
   const nome = document.getElementById('cli-nome').value.trim();
   if (!nome) { alert('Nome obrigatório.'); return; }
-  const obj = {
-    id: editingClienteId || nextId.cli++,
+  const sbObj = {
     nome, contato: document.getElementById('cli-contato').value,
     whatsapp: document.getElementById('cli-whatsapp').value,
     email: document.getElementById('cli-email').value,
@@ -1503,10 +1502,13 @@ function saveCliente() {
     obs: document.getElementById('cli-obs').value,
   };
   if (editingClienteId) {
+    await sbUpdate('clientes', editingClienteId, sbObj);
     const idx = clientes.findIndex(c => c.id === editingClienteId);
-    clientes[idx] = obj;
+    clientes[idx] = { id: editingClienteId, ...sbObj };
   } else {
-    clientes.push(obj);
+    const inserted = await sbInsert('clientes', sbObj);
+    const newId = inserted ? inserted.id : nextId.cli++;
+    clientes.push({ id: newId, ...sbObj });
   }
   closeModal('modal-cliente');
   updateClienteSelects();
@@ -1514,8 +1516,9 @@ function saveCliente() {
   renderClientes();
 }
 
-function deleteCliente(id) {
+async function deleteCliente(id) {
   if (!confirm('Excluir este cliente?')) return;
+  await sbDelete('clientes', id);
   clientes = clientes.filter(c => c.id !== id);
   salvarDB();
   updateClienteSelects();
@@ -1602,7 +1605,7 @@ function preencherMensalidade() {
   if (!refEl.value) refEl.value = `${mesNome}/${ano}`;
 }
 
-function saveMensalidade() {
+async function saveMensalidade() {
   const cid = parseInt(document.getElementById('mens-cliente').value);
   const desc = document.getElementById('mens-desc').value.trim();
   const valor = parseFloat(document.getElementById('mens-valor').value);
@@ -1610,6 +1613,8 @@ function saveMensalidade() {
   if (!cid||!desc||!venc) { alert('Preencha os campos obrigatórios.'); return; }
   const ref = document.getElementById('mens-ref').value;
   if (editingMensId) {
+    const sbObj = { cliente_id: cid, descricao: desc, valor, vencimento: venc, referencia: ref };
+    await sbUpdate('mensalidades', editingMensId, sbObj);
     const idx = mensalidades.findIndex(m=>m.id===editingMensId);
     if (idx>=0) {
       mensalidades[idx].clienteId = cid;
@@ -1620,12 +1625,10 @@ function saveMensalidade() {
     }
     editingMensId = null;
   } else {
-    mensalidades.push({
-      id: nextId.mens++, clienteId: cid, desc, valor, vencimento: venc,
-      ref,
-      status: 'em_aberto',
-      forma: '', dataPagto: '', enviadoEm: '', concluidoEm: ''
-    });
+    const sbObj = { cliente_id: cid, descricao: desc, valor, vencimento: venc, referencia: ref, status: 'em_aberto', forma: '', data_pagto: '', enviado_em: '', concluido_em: '' };
+    const inserted = await sbInsert('mensalidades', sbObj);
+    const newId = inserted ? inserted.id : nextId.mens++;
+    mensalidades.push({ id: newId, clienteId: cid, desc, valor, vencimento: venc, ref, status: 'em_aberto', forma: '', dataPagto: '', enviadoEm: '', concluidoEm: '' });
   }
   document.getElementById('modal-mens-title').textContent = 'Novo Lançamento de Mensalidade';
   document.getElementById('btn-save-mens').textContent = 'Lançar Mensalidade';
@@ -1649,18 +1652,20 @@ function editMensalidade(id) {
   openModal('modal-mensalidade');
 }
 
-function deleteMensalidade(id) {
+async function deleteMensalidade(id) {
   if (!confirm('Excluir este lançamento?')) return;
+  await sbDelete('mensalidades', id);
   mensalidades = mensalidades.filter(m=>m.id!==id);
   refreshAllMens();
 }
 
 // Passo 1: Em Aberto → Enviado ao Cliente
-function marcarEnviado(id) {
+async function marcarEnviado(id) {
   const m = mensalidades.find(x=>x.id===id);
   if (!m) return;
   m.status = 'enviado';
   m.enviadoEm = new Date().toISOString().split('T')[0];
+  await sbUpdate('mensalidades', id, { status: 'enviado', enviado_em: m.enviadoEm });
   refreshAllMens();
 }
 
@@ -1704,7 +1709,7 @@ function abrirCobranca(id) {
 }
 
 // Passo 3: Cobrança → Concluído (status=recebido)
-function confirmarPagamento() {
+async function confirmarPagamento() {
   const id = parseInt(document.getElementById('cob-mens-id').value);
   const forma = document.getElementById('cob-forma').value;
   const data = document.getElementById('cob-data').value;
@@ -1715,24 +1720,27 @@ function confirmarPagamento() {
   m.forma = forma;
   m.dataPagto = data;
   m.concluidoEm = new Date().toISOString().split('T')[0];
+  await sbUpdate('mensalidades', id, { status: 'recebido', forma, data_pagto: data, concluido_em: m.concluidoEm });
   closeModal('modal-cobranca-form');
   refreshAllMens();
 }
 
-function voltarAberto(id) {
+async function voltarAberto(id) {
   const m = mensalidades.find(x=>x.id===id);
   m.status = 'em_aberto';
   m.enviadoEm = '';
+  await sbUpdate('mensalidades', id, { status: 'em_aberto', enviado_em: '' });
   refreshAllMens();
 }
 
-function voltarEnviado(id) {
+async function voltarEnviado(id) {
   if (!confirm('Reverter este pagamento para "Enviado ao Cliente"?')) return;
   const m = mensalidades.find(x=>x.id===id);
   m.status = 'enviado';
   m.forma = '';
   m.dataPagto = '';
   m.concluidoEm = '';
+  await sbUpdate('mensalidades', id, { status: 'enviado', forma: '', data_pagto: '', concluido_em: '' });
   refreshAllMens();
 }
 
@@ -1882,42 +1890,34 @@ function kanbanPrazoAlerta(fim) {
   return '';
 }
 
-function moverKanban(id, novoStatus) {
+async function moverKanban(id, novoStatus) {
   const t = tarefas.find(x=>x.id===id);
   if (!t) return;
   t.status = novoStatus;
-  // Se concluindo e não tem data fim, preenche hoje
-  if (novoStatus === 'concluido' && !t.fim) {
-    t.fim = new Date().toISOString().split('T')[0];
-  }
-  // Se iniciando e não tem data início, preenche hoje
-  if (novoStatus === 'em_andamento' && !t.inicio) {
-    t.inicio = new Date().toISOString().split('T')[0];
-  }
+  if (novoStatus === 'concluido' && !t.fim) t.fim = new Date().toISOString().split('T')[0];
+  if (novoStatus === 'em_andamento' && !t.inicio) t.inicio = new Date().toISOString().split('T')[0];
+  await sbUpdate('tarefas', id, { status: novoStatus, fim: t.fim||null, inicio: t.inicio||null });
   salvarDB();
-  renderProjetos();
-  renderTarefas();
-  renderConcluidas();
-  renderDashTasks();
+  renderProjetos(); renderTarefas(); renderConcluidas(); renderDashTasks();
 }
 
-function kanbanEditNome(id, nome) {
+async function kanbanEditNome(id, nome) {
   const t = tarefas.find(x=>x.id===id);
-  if (t && nome) { t.nome = nome; salvarDB(); renderTarefas(); }
+  if (t && nome) { t.nome = nome; await sbUpdate('tarefas', id, { nome }); salvarDB(); renderTarefas(); }
 }
 
-function kanbanEditData(id, campo, valor) {
+async function kanbanEditData(id, campo, valor) {
   const t = tarefas.find(x=>x.id===id);
   if (!t) return;
   t[campo] = valor;
-  salvarDB();
-  renderProjetos();
-  renderTarefas();
+  const sbCampo = campo === 'inicio' ? 'inicio' : 'fim';
+  await sbUpdate('tarefas', id, { [sbCampo]: valor });
+  salvarDB(); renderProjetos(); renderTarefas();
 }
 
-function kanbanEditPrioridade(id, val) {
+async function kanbanEditPrioridade(id, val) {
   const t = tarefas.find(x=>x.id===id);
-  if (t) { t.prioridade = val; salvarDB(); renderProjetos(); renderTarefas(); }
+  if (t) { t.prioridade = val; await sbUpdate('tarefas', id, { prioridade: val }); salvarDB(); renderProjetos(); renderTarefas(); }
 }
 
 // ============================================================
@@ -2152,10 +2152,9 @@ function renderTarefas() {
   tarefas.filter(t=>t.timerRunning).forEach(t => startTimerInterval(t.id));
 }
 
-function concluirTarefa(id) {
+async function concluirTarefa(id) {
   const t = tarefas.find(x=>x.id===id);
   if (!t) return;
-  // Para o timer se estiver rodando
   if (t.timerRunning) {
     clearInterval(timerIntervals[id]);
     delete timerIntervals[id];
@@ -2163,11 +2162,9 @@ function concluirTarefa(id) {
   }
   t.status = 'concluido';
   if (!t.fim) t.fim = new Date().toISOString().split('T')[0];
+  await sbUpdate('tarefas', id, { status: 'concluido', fim: t.fim, tempo_gasto: t.tempoGasto });
   salvarDB();
-  renderTarefas();
-  renderConcluidas();
-  renderProjetos();
-  renderDashTasks();
+  renderTarefas(); renderConcluidas(); renderProjetos(); renderDashTasks();
 }
 
 function toggleTimer(id) {
@@ -2196,30 +2193,29 @@ function startTimerInterval(id) {
     const el = document.getElementById('timer-'+id);
     if (el) el.textContent = fmtTempo(t.tempoGasto);
     // Salvar a cada 30 segundos
-    if (t.tempoGasto % 30 === 0) salvarDB();
+    if (t.tempoGasto % 30 === 0) { salvarDB(); sbUpdate("tarefas", id, { tempo_gasto: t.tempoGasto }); }
   }, 1000);
 }
 
-function saveTarefa() {
+async function saveTarefa() {
   const cid = parseInt(document.getElementById('tar-cliente').value);
   const nome = document.getElementById('tar-nome').value.trim();
   if (!cid||!nome) { alert('Cliente e nome são obrigatórios.'); return; }
-  const obj = {
-    id: editingTarefaId||nextId.tar++,
-    clienteId: cid, nome,
-    inicio: document.getElementById('tar-inicio').value,
-    fim: document.getElementById('tar-fim').value,
-    status: document.getElementById('tar-status').value,
-    prioridade: document.getElementById('tar-prioridade').value,
-    desc: document.getElementById('tar-desc').value,
-    tempoGasto: editingTarefaId ? (tarefas.find(t=>t.id===editingTarefaId)||{}).tempoGasto||0 : 0,
-    timerRunning: false
-  };
+  const inicio = document.getElementById('tar-inicio').value;
+  const fim = document.getElementById('tar-fim').value;
+  const status = document.getElementById('tar-status').value;
+  const prioridade = document.getElementById('tar-prioridade').value;
+  const desc = document.getElementById('tar-desc').value;
+  const tempoGasto = editingTarefaId ? (tarefas.find(t=>t.id===editingTarefaId)||{}).tempoGasto||0 : 0;
+  const sbObj = { cliente_id: cid, nome, descricao: desc, inicio, fim, status, prioridade, tempo_gasto: tempoGasto };
   if (editingTarefaId) {
+    await sbUpdate('tarefas', editingTarefaId, sbObj);
     const idx = tarefas.findIndex(t=>t.id===editingTarefaId);
-    tarefas[idx] = obj;
+    tarefas[idx] = { id: editingTarefaId, clienteId: cid, nome, desc, inicio, fim, status, prioridade, tempoGasto, timerRunning: false };
   } else {
-    tarefas.push(obj);
+    const inserted = await sbInsert('tarefas', sbObj);
+    const newId = inserted ? inserted.id : nextId.tar++;
+    tarefas.push({ id: newId, clienteId: cid, nome, desc, inicio, fim, status, prioridade, tempoGasto: 0, timerRunning: false });
   }
   editingTarefaId = null;
   closeModal('modal-tarefa');
@@ -2241,19 +2237,21 @@ function editTarefa(id) {
   openModal('modal-tarefa');
 }
 
-function deleteTarefa(id) {
+async function deleteTarefa(id) {
   if (!confirm('Excluir tarefa?')) return;
   if (timerIntervals[id]) { clearInterval(timerIntervals[id]); delete timerIntervals[id]; }
+  await sbDelete('tarefas', id);
   tarefas = tarefas.filter(t=>t.id!==id);
   salvarDB();
   renderTarefas(); renderProjetos(); renderConcluidas();
 }
 
-function reabrirTarefa(id) {
+async function reabrirTarefa(id) {
   if (!confirm('Reverter tarefa para "Em Andamento"?')) return;
   const t = tarefas.find(x=>x.id===id);
   if (!t) return;
   t.status = 'em_andamento';
+  await sbUpdate('tarefas', id, { status: 'em_andamento' });
   salvarDB();
   renderTarefas(); renderProjetos(); renderConcluidas(); renderDashTasks();
 }
@@ -2892,37 +2890,65 @@ function editarReuniao(id) {
   openModal('modal-reuniao');
 }
 
-function salvarReuniao() {
+async function salvarReuniao() {
   const titulo = document.getElementById('reu-titulo').value.trim();
   const data = document.getElementById('reu-data').value;
   if (!titulo || !data) { alert('Título e data são obrigatórios.'); return; }
   const idAtual = parseInt(document.getElementById('reu-id').value) || 0;
-  const obj = {
-    id: idAtual || nextReuId++,
-    titulo, data,
-    hora: document.getElementById('reu-hora').value,
-    duracao: parseInt(document.getElementById('reu-duracao').value) || 60,
-    clienteId: parseInt(document.getElementById('reu-cliente').value) || 0,
-    obs: document.getElementById('reu-obs').value,
-  };
-  if (idAtual) { const idx = reunioes.findIndex(r => r.id === idAtual); reunioes[idx] = obj; }
-  else { reunioes.push(obj); }
+  const hora = document.getElementById('reu-hora').value;
+  const duracao = parseInt(document.getElementById('reu-duracao').value) || 60;
+  const clienteId = parseInt(document.getElementById('reu-cliente').value) || 0;
+  const obs = document.getElementById('reu-obs').value;
+  const sbObj = { titulo, data, hora, duracao, cliente_id: clienteId, obs };
+  if (idAtual) {
+    await sbUpdate('reunioes', idAtual, sbObj);
+    const idx = reunioes.findIndex(r => r.id === idAtual);
+    reunioes[idx] = { id: idAtual, titulo, data, hora, duracao, clienteId, obs };
+  } else {
+    const inserted = await sbInsert('reunioes', sbObj);
+    const newId = inserted ? inserted.id : nextReuId++;
+    reunioes.push({ id: newId, titulo, data, hora, duracao, clienteId, obs });
+  }
   closeModal('modal-reuniao');
   salvarDB();
   renderCalendario();
 }
 
-function excluirReuniao() {
+async function excluirReuniao() {
   const id = parseInt(document.getElementById('reu-id').value);
   if (!id || !confirm('Excluir esta reunião?')) return;
+  await sbDelete('reunioes', id);
   reunioes = reunioes.filter(r => r.id !== id);
   closeModal('modal-reuniao');
   salvarDB();
   renderCalendario();
 }
-function initApp() {
-  // Carregar dados salvos do navegador
-  carregarDB();
+async function initApp() {
+  showLoader('🔄 Carregando dados...');
+  try {
+    // Tenta carregar do Supabase (fonte de verdade)
+    const [cliRows, mensRows, tarRows, reuRows] = await Promise.all([
+      sbGet('clientes'),
+      sbGet('mensalidades'),
+      sbGet('tarefas'),
+      sbGet('reunioes'),
+    ]);
+    clientes     = (cliRows  || []).map(mapCliente);
+    mensalidades = (mensRows || []).map(mapMens);
+    tarefas      = (tarRows  || []).map(mapTarefa);
+    reunioes     = (reuRows  || []).map(mapReuniao);
+    // Recalcula próximos IDs locais a partir do banco
+    nextId.cli  = clientes.length     ? Math.max(...clientes.map(c=>c.id))     + 1 : 1;
+    nextId.mens = mensalidades.length ? Math.max(...mensalidades.map(m=>m.id)) + 1 : 1;
+    nextId.tar  = tarefas.length      ? Math.max(...tarefas.map(t=>t.id))      + 1 : 1;
+    nextReuId   = reunioes.length     ? Math.max(...reunioes.map(r=>r.id))     + 1 : 1;
+    // Salva cópia local como cache offline
+    salvarDB();
+  } catch(e) {
+    console.warn('Supabase indisponível, usando cache local:', e);
+    carregarDB();
+  }
+  hideLoader();
   updateClienteSelects();
   calTarefasSelecionadas = new Set(tarefas.map(t => t.id));
   renderDashFin();
