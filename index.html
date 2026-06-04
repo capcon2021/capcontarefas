@@ -652,6 +652,7 @@ tr:hover td { background: #fafafa; }
       <div class="field"><label>E-mail</label><input type="email" id="cli-email" placeholder="email@empresa.com"></div>
       <div class="field"><label>CNPJ / CPF</label><input type="text" id="cli-cnpj" placeholder="00.000.000/0001-00"></div>
       <div class="field"><label>Endereço / Cidade</label><input type="text" id="cli-endereco" placeholder="Cidade - UF"></div>
+      <div class="field"><label>Valor Mensal (R$)</label><input type="number" id="cli-valor" placeholder="Ex: 350.00" min="0" step="0.01"></div>
       <div class="field"><label>Dia de Vencimento</label><input type="number" id="cli-venc" placeholder="Ex: 10" min="1" max="31"></div>
       <div class="field"><label>🎂 Data de Aniversário</label><input type="date" id="cli-aniversario" title="Aniversário do responsável ou fundação da empresa"></div>
       <div class="field" style="grid-column:1/-1"><label>Observações</label><textarea id="cli-obs" rows="2" placeholder="Informações adicionais..."></textarea></div>
@@ -675,7 +676,7 @@ tr:hover td { background: #fafafa; }
         <select id="mens-cliente" onchange="preencherMensalidade()"><option value="">Selecione...</option></select>
       </div>
       <div class="field"><label>Descrição *</label><input type="text" id="mens-desc" placeholder="Ex: Mensalidade Maio/2025"></div>
-      <input type="hidden" id="mens-valor" value="0">
+      <div class="field"><label>Valor (R$) *</label><input type="number" id="mens-valor" placeholder="Ex: 350.00" min="0" step="0.01"></div>
       <div class="field"><label>Vencimento *</label><input type="date" id="mens-venc"></div>
       <div class="field"><label>Referência (Mês/Ano)</label><input type="text" id="mens-ref" placeholder="Ex: Maio/2025"></div>
       <div class="field" style="display:flex;align-items:flex-end;">
@@ -954,9 +955,9 @@ async function sbInsert(table, data) {
   try {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(data) });
     const body = await r.json();
-    if (!r.ok) { alert('Erro Supabase (' + table + '): ' + JSON.stringify(body)); return null; }
+    if (!r.ok) { console.error('sbInsert erro:', table, body); return null; }
     return Array.isArray(body) ? body[0] : body;
-  } catch(e) { alert('Erro conexao: ' + e.message); return null; }
+  } catch(e) { console.error('sbInsert falhou:', table, e); return null; }
 }
 async function sbUpdate(table, id, data) {
   try {
@@ -1494,6 +1495,7 @@ function editCliente(id) {
   document.getElementById('cli-email').value = c.email||'';
   document.getElementById('cli-cnpj').value = c.cnpj||'';
   document.getElementById('cli-endereco').value = c.endereco||'';
+  document.getElementById('cli-valor').value = c.valor||'';
   document.getElementById('cli-venc').value = c.vencimento||'';
   document.getElementById('cli-aniversario').value = c.aniversario||'';
   document.getElementById('cli-obs').value = c.obs||'';
