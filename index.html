@@ -358,7 +358,7 @@ tr:hover td { background: #fafafa; }
         <div class="card">
           <div class="card-body">
             <table>
-              <thead><tr><th>Nome/Empresa</th><th>Contato</th><th>WhatsApp</th><th>E-mail</th><th>Ações</th></tr></thead>
+              <thead><tr><th>#</th><th>Nome/Empresa</th><th>Contato</th><th>WhatsApp</th><th>E-mail</th><th>Valor Mensal</th><th>Ações</th></tr></thead>
               <tbody id="tb-clientes"></tbody>
             </table>
           </div>
@@ -987,6 +987,7 @@ function mapReuniao(r) { return { id: r.id, titulo: r.titulo||'', data: r.data||
 const DB_KEY = 'cap_gestao_db';
 
 function salvarDB() {
+  _ultimaSalvagem = Date.now();
   try {
     localStorage.setItem(DB_KEY, JSON.stringify({
       clientes, mensalidades, tarefas, reunioes,
@@ -1464,13 +1465,15 @@ function renderClientes() {
   const q = (document.getElementById('search-cliente').value||'').toLowerCase();
   const rows = clientes.filter(c => c.nome.toLowerCase().includes(q) || (c.contato||'').toLowerCase().includes(q));
   const tb = document.getElementById('tb-clientes');
-  if (!rows.length) { tb.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhum cliente encontrado.</td></tr>'; return; }
-  tb.innerHTML = rows.map(c => `
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhum cliente encontrado.</td></tr>'; return; }
+  tb.innerHTML = rows.map((c, i) => `
     <tr>
+      <td style="color:var(--gray);font-size:12px;font-weight:700;width:36px;">${i+1}</td>
       <td><strong>${c.nome}</strong></td>
       <td>${c.contato||'–'}</td>
       <td>${c.whatsapp||'–'}</td>
       <td>${c.email||'–'}</td>
+      <td><strong style="color:var(--orange);">${c.valor ? fmt(c.valor) : '–'}</strong></td>
       <td><div class="action-row">
         <button class="btn btn-sm btn-secondary" onclick="editCliente(${c.id})">✏️ Editar</button>
         <button class="btn btn-sm btn-danger" onclick="deleteCliente(${c.id})">🗑</button>
@@ -2942,8 +2945,11 @@ async function excluirReuniao() {
   renderCalendario();
 }
 let _autoRefreshInterval = null;
+let _ultimaSalvagem = 0;
 
 async function sincronizarDados(silencioso = false) {
+  // Não sincroniza se houve salvamento nos últimos 5 segundos (evita sobrescrever)
+  if (silencioso && (Date.now() - _ultimaSalvagem) < 5000) return;
   const statusEl = document.getElementById('sync-status');
   const btnEl = document.getElementById('btn-sync');
   if (btnEl) btnEl.disabled = true;
