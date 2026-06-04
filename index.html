@@ -370,7 +370,6 @@ tr:hover td { background: #fafafa; }
         <div class="page-header">
           <div><div class="page-title">Mensalidades</div><div class="page-sub">Lançamento e controle</div></div>
           <div style="display:flex;gap:8px;">
-            <button class="btn btn-secondary" onclick="zerarValoresMensalidades()" title="Zerar valores de todos os lançamentos">🔄 Zerar Valores</button>
             <button class="btn btn-primary" onclick="novaMensalidade()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Novo Lançamento
@@ -1561,11 +1560,17 @@ function renderMensalidades() {
   });
   const tb = document.getElementById('tb-mensalidades');
   if (!rows.length) { tb.innerHTML='<tr><td colspan="6"><div class="empty-state"><p>Nenhum lançamento em aberto.</p></div></td></tr>'; return; }
-  tb.innerHTML = rows.map(m => `
-    <tr>
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  tb.innerHTML = rows.map(m => {
+    const venc = m.vencimento ? new Date(m.vencimento + 'T00:00:00') : null;
+    const atrasado = venc && venc < hoje && m.status !== 'recebido';
+    const rowStyle = atrasado ? 'background:#fff5f5;border-left:3px solid #ef4444;' : '';
+    const vencStr = atrasado ? `<span style="color:#ef4444;font-weight:700;">&#9888; ${fmtDate(m.vencimento)}</span>` : fmtDate(m.vencimento);
+    return `
+    <tr style="${rowStyle}">
       <td><strong>${getCliNome(m.clienteId)}</strong></td>
       <td>${m.desc}</td>
-      <td>${fmtDate(m.vencimento)}</td>
+      <td>${vencStr}</td>
       <td><strong>${fmt(m.valor)}</strong></td>
       <td>${statusBadge(m.status)}</td>
       <td><div class="action-row">
@@ -1576,7 +1581,8 @@ function renderMensalidades() {
         <button class="btn btn-sm" style="background:#ede9fe;color:#5b21b6;border:none;" onclick="editMensalidade(${m.id})" title="Editar">✏️</button>
         <button class="btn btn-sm btn-danger" onclick="deleteMensalidade(${m.id})" title="Excluir">🗑</button>
       </div></td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 
 function novaMensalidade() {
