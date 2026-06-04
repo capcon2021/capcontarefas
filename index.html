@@ -944,18 +944,31 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const SB_HEADERS = { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer': 'return=representation' };
 
 async function sbGet(table, params = '') {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?order=id${params}`, { headers: SB_HEADERS });
-  return r.ok ? r.json() : [];
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?order=id${params}`, { headers: SB_HEADERS });
+    if (!r.ok) { console.error('sbGet erro:', table, await r.text()); return []; }
+    return r.json();
+  } catch(e) { console.error('sbGet falhou:', table, e); return []; }
 }
 async function sbInsert(table, data) {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(data) });
-  const rows = await r.json(); return rows[0];
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(data) });
+    const body = await r.json();
+    if (!r.ok) { console.error('sbInsert erro:', table, body); return null; }
+    return Array.isArray(body) ? body[0] : body;
+  } catch(e) { console.error('sbInsert falhou:', table, e); return null; }
 }
 async function sbUpdate(table, id, data) {
-  await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, { method: 'PATCH', headers: SB_HEADERS, body: JSON.stringify(data) });
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, { method: 'PATCH', headers: SB_HEADERS, body: JSON.stringify(data) });
+    if (!r.ok) console.error('sbUpdate erro:', table, id, await r.text());
+  } catch(e) { console.error('sbUpdate falhou:', table, e); }
 }
 async function sbDelete(table, id) {
-  await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, { method: 'DELETE', headers: SB_HEADERS });
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, { method: 'DELETE', headers: SB_HEADERS });
+    if (!r.ok) console.error('sbDelete erro:', table, id, await r.text());
+  } catch(e) { console.error('sbDelete falhou:', table, e); }
 }
 
 // Mapear snake_case do banco → camelCase local
