@@ -301,6 +301,8 @@ tr:hover td { background: #fafafa; }
       <div class="topbar-title" id="topbar-title">Dashboard Financeiro</div>
       <div class="topbar-right">
         <span id="topbar-date" style="font-size:12px;color:var(--gray);"></span>
+        <span id="sync-status" style="font-size:11px;color:var(--gray);"></span>
+        <button onclick="sincronizarDados()" id="btn-sync" title="Atualizar dados agora" style="background:var(--orange-light);color:var(--orange);border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;font-weight:700;">🔄 Atualizar</button>
         <span class="user-badge" id="topbar-user">Admin</span>
       </div>
     </div>
@@ -1075,6 +1077,7 @@ function doLogin() {
 document.getElementById('inp-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 
 function doLogout() {
+  if (_autoRefreshInterval) { clearInterval(_autoRefreshInterval); _autoRefreshInterval = null; }
   Object.values(timerIntervals).forEach(clearInterval);
   timerIntervals = {};
   tarefas.forEach(t => t.timerRunning = false);
@@ -2938,6 +2941,58 @@ async function excluirReuniao() {
   salvarDB();
   renderCalendario();
 }
+let _autoRefreshInterval = null;
+
+async function sincronizarDados(silencioso = false) {
+  const statusEl = document.getElementById('sync-status');
+  const btnEl = document.getElementById('btn-sync');
+  if (btnEl) btnEl.disabled = true;
+  if (statusEl) statusEl.textContent = '⟳ Sincronizando...';
+  try {
+    const [cliRows, mensRows, tarRows, reuRows] = await Promise.all([
+      sbGet('clientes'),
+      sbGet('mensalidades'),
+      sbGet('tarefas'),
+      sbGet('reunioes'),
+    ]);
+    clientes     = (cliRows  || []).map(mapCliente);
+    mensalidades = (mensRows || []).map(mapMens);
+    tarefas      = (tarRows  || []).map(mapTarefa).map(t => ({ ...t, timerRunning: false }));
+    reunioes     = (reuRows  || []).map(mapReuniao);
+    nextId.cli  = clientes.length     ? Math.max(...clientes.map(c=>c.id))     + 1 : 1;
+    nextId.mens = mensalidades.length ? Math.max(...mensalidades.map(m=>m.id)) + 1 : 1;
+    nextId.tar  = tarefas.length      ? Math.max(...tarefas.map(t=>t.id))      + 1 : 1;
+    nextReuId   = reunioes.length     ? Math.max(...reunioes.map(r=>r.id))     + 1 : 1;
+    salvarDB();
+    updateClienteSelects();
+    // Atualiza a tela ativa sem piscar
+    const telaAtiva = document.querySelector('.screen.active');
+    if (telaAtiva) {
+      const id = telaAtiva.id.replace('screen-', '');
+      if (id === 'dashboard-fin') renderDashFin();
+      else if (id === 'clientes') renderClientes();
+      else if (id === 'mensalidades') renderMensalidades();
+      else if (id === 'enviados') renderEnviados();
+      else if (id === 'recebidos') renderRecebidos();
+      else if (id === 'tarefas') renderTarefas();
+      else if (id === 'projetos') renderProjetos();
+      else if (id === 'concluidas') renderConcluidas();
+      else if (id === 'dashboard-tasks') renderDashTasks();
+      else if (id === 'calendario') renderCalendario();
+    }
+    const agora = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+    if (statusEl) statusEl.textContent = `✓ ${agora}`;
+  } catch(e) {
+    if (statusEl) statusEl.textContent = '⚠ Offline';
+  }
+  if (btnEl) btnEl.disabled = false;
+}
+
+function iniciarAutoRefresh() {
+  if (_autoRefreshInterval) clearInterval(_autoRefreshInterval);
+  _autoRefreshInterval = setInterval(() => sincronizarDados(true), 30000);
+}
+
 async function initApp() {
   showLoader('🔄 Carregando dados...');
   try {
@@ -2973,6 +3028,7 @@ async function initApp() {
   if (dfAno) dfAno.value = '';
   const dtAno = document.getElementById('dt-ano');
   if (dtAno) { const opt = dtAno.querySelector(`option[value="${new Date().getFullYear()}"]`); if(opt) opt.selected=true; }
+  iniciarAutoRefresh();
 }
 </script>
 </body>
