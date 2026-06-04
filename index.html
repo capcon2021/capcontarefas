@@ -1634,7 +1634,7 @@ async function saveMensalidade() {
   if (!cid||!desc||!venc) { alert('Preencha os campos obrigatórios.'); return; }
   const ref = document.getElementById('mens-ref').value;
   if (editingMensId) {
-    const sbObj = { cliente_id: cid, descricao: desc, valor, vencimento: venc, referencia: ref };
+    const sbObj = { cliente_id: cid, descricao: desc, valor: valor||0, vencimento: venc, referencia: ref||null };
     await sbUpdate('mensalidades', editingMensId, sbObj);
     const idx = mensalidades.findIndex(m=>m.id===editingMensId);
     if (idx>=0) {
@@ -1646,7 +1646,7 @@ async function saveMensalidade() {
     }
     editingMensId = null;
   } else {
-    const sbObj = { cliente_id: cid, descricao: desc, valor, vencimento: venc, referencia: ref, status: 'em_aberto', forma: '', data_pagto: '', enviado_em: '', concluido_em: '' };
+    const sbObj = { cliente_id: cid, descricao: desc, valor: valor||0, vencimento: venc, referencia: ref||null, status: 'em_aberto', forma: null, data_pagto: null, enviado_em: null, concluido_em: null };
     const inserted = await sbInsert('mensalidades', sbObj);
     const newId = inserted ? inserted.id : nextId.mens++;
     mensalidades.push({ id: newId, clienteId: cid, desc, valor, vencimento: venc, ref, status: 'em_aberto', forma: '', dataPagto: '', enviadoEm: '', concluidoEm: '' });
