@@ -95,6 +95,146 @@ body { font-family: 'Nunito', sans-serif; background: #f8f9fb; color: var(--gray
 }
 .sidebar-footer .logout-btn:hover { color: var(--danger); }
 
+/* ============================================================
+   HAMBURGUER + SIDEBAR MOBILE
+   ============================================================ */
+.hamburger-btn {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 8px;
+  flex-direction: column;
+  gap: 5px;
+  border-radius: 8px;
+}
+.hamburger-btn span {
+  display: block;
+  width: 22px;
+  height: 2.5px;
+  background: var(--gray-dark);
+  border-radius: 2px;
+}
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 199;
+}
+.sidebar-overlay.active { display: block; }
+
+/* === MOBILE: telas até 768px === */
+@media screen and (max-width: 768px) {
+
+  /* Sidebar escondida à esquerda */
+  .sidebar {
+    left: -260px !important;
+    z-index: 200 !important;
+    transition: left 0.28s ease;
+    width: 240px !important;
+  }
+  .sidebar.open { left: 0 !important; }
+
+  /* Conteúdo ocupa tela toda */
+  .main { margin-left: 0 !important; }
+
+  /* Topbar compacta */
+  .topbar { padding: 0 10px; height: 50px; }
+  .topbar-title { font-size: 15px; }
+  #topbar-date, #sync-status { display: none !important; }
+  .user-badge { font-size: 11px; padding: 4px 9px; }
+  #btn-sync { font-size: 11px; padding: 5px 9px; }
+
+  /* Mostrar hamburguer */
+  .hamburger-btn { display: flex; }
+
+  /* Padding do conteúdo */
+  .content { padding: 10px; }
+
+  /* KPIs: 2 colunas */
+  .kpi-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .kpi-card { padding: 12px 10px; }
+  .kpi-card .kpi-value { font-size: 20px; }
+  .kpi-card .kpi-label { font-size: 10px; }
+
+  /* Filters */
+  .filters { flex-wrap: wrap; gap: 8px; padding-bottom: 4px; }
+  .filters select, .filters input[type="text"] { font-size: 14px; }
+
+  /* Tabelas viram cards */
+  .card-body table { display: block; width: 100%; }
+  .card-body thead { display: none; }
+  .card-body tbody { display: block; }
+  .card-body tbody tr {
+    display: block;
+    background: var(--gray-light);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .card-body tbody td {
+    display: flex;
+    align-items: flex-start;
+    padding: 4px 0;
+    font-size: 13px;
+    border: none !important;
+    gap: 8px;
+    min-height: unset;
+  }
+  .card-body tbody td:first-child { font-weight: 700; font-size: 14px; }
+  .action-row { margin-top: 6px; flex-wrap: wrap; gap: 6px; }
+  .btn-sm { font-size: 12px !important; padding: 5px 10px !important; }
+
+  /* Page header */
+  .page-header { flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .page-title { font-size: 18px; }
+
+  /* Modal: sobe da base */
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 20px 20px 0 0 !important;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding-bottom: env(safe-area-inset-bottom, 16px);
+  }
+  .modal-header { padding: 16px 16px 12px; }
+  .modal-body { padding: 0 16px 16px; }
+
+  /* Inputs grandes evitam zoom no iOS */
+  input, select, textarea { font-size: 16px !important; }
+
+  /* Cards simples */
+  .card { border-radius: 10px; margin-bottom: 12px; }
+  .card-body { padding: 10px; }
+
+  /* Botão novo */
+  .btn-primary { font-size: 13px; }
+}
+
+@media screen and (max-width: 400px) {
+  .kpi-grid { grid-template-columns: 1fr; }
+  .topbar-title {
+    font-size: 13px;
+    max-width: 110px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+
 .main { margin-left: var(--sidebar-w); min-height: 100vh; }
 .topbar {
   background: white; padding: 0 28px; height: 60px; display: flex; align-items: center;
@@ -2144,160 +2284,6 @@ function printRecibo() {
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #f5f5f5; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; font-family: Arial, sans-serif; }
     
-/* ============================================================
-   MOBILE RESPONSIVE
-   ============================================================ */
-
-/* Hamburguer button - hidden on desktop */
-.hamburger-btn {
-  display: none;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 8px;
-  flex-direction: column;
-  gap: 5px;
-  margin-right: 8px;
-}
-.hamburger-btn span {
-  display: block;
-  width: 22px;
-  height: 2px;
-  background: var(--gray-dark);
-  border-radius: 2px;
-  transition: all 0.3s;
-}
-
-/* Overlay for sidebar on mobile */
-.sidebar-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.5);
-  z-index: 99;
-}
-.sidebar-overlay.active { display: block; }
-
-@media (max-width: 768px) {
-
-  /* Sidebar: hidden by default on mobile */
-  .sidebar {
-    position: fixed;
-    left: -240px;
-    top: 0;
-    height: 100vh;
-    z-index: 200;
-    transition: left 0.3s ease;
-    width: 240px !important;
-  }
-  .sidebar.open { left: 0; }
-
-  /* Main: full width on mobile */
-  .main { margin-left: 0 !important; }
-
-  /* Topbar adjustments */
-  .topbar {
-    padding: 0 12px;
-    height: 52px;
-  }
-  .topbar-title { font-size: 15px; }
-  .topbar-right { gap: 6px; }
-  #topbar-date { display: none; }
-  #sync-status { display: none; }
-  .user-badge { font-size: 11px; padding: 4px 8px; }
-  #btn-sync { font-size: 11px; padding: 5px 8px; }
-
-  /* Show hamburger on mobile */
-  .hamburger-btn { display: flex; }
-
-  /* Content padding */
-  .content { padding: 12px; }
-
-  /* KPI grid: 2 columns */
-  .kpi-grid { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-  .kpi-card { padding: 14px; }
-  .kpi-card .kpi-value { font-size: 20px; }
-
-  /* Tables: turn into cards on mobile */
-  table { display: block; }
-  thead { display: none; }
-  tbody { display: block; }
-  tr {
-    display: block;
-    margin-bottom: 10px;
-    background: white;
-    border-radius: 10px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-  }
-  td {
-    display: flex;
-    align-items: center;
-    padding: 4px 0;
-    font-size: 13px;
-    border: none;
-    gap: 8px;
-  }
-  td::before {
-    content: attr(data-label);
-    font-weight: 700;
-    font-size: 10px;
-    text-transform: uppercase;
-    color: var(--gray);
-    min-width: 80px;
-    flex-shrink: 0;
-  }
-  td:first-child { padding-top: 2px; }
-  td:last-child { padding-bottom: 2px; margin-top: 4px; }
-  .action-row { flex-wrap: wrap; gap: 6px; }
-  .action-row .btn { font-size: 12px; padding: 5px 8px; }
-
-  /* Filters: stack */
-  .filters { flex-wrap: wrap; gap: 8px; }
-  .filters select, .filters input { font-size: 13px; }
-
-  /* Modals: full screen on mobile */
-  .modal-overlay { padding: 0; align-items: flex-end; }
-  .modal {
-    width: 100% !important;
-    max-width: 100% !important;
-    border-radius: 16px 16px 0 0;
-    max-height: 92vh;
-    overflow-y: auto;
-  }
-  .modal-body { padding: 16px; }
-  .field { margin-bottom: 12px; }
-  .field input, .field select, .field textarea { font-size: 16px; } /* prevent iOS zoom */
-
-  /* Buttons */
-  .btn-primary { font-size: 13px; padding: 8px 14px; }
-  .page-header { flex-wrap: wrap; gap: 8px; }
-  .page-title { font-size: 18px; }
-
-  /* Cards */
-  .card { border-radius: 10px; }
-  .card-body { padding: 12px; }
-
-  /* Timer on tarefas */
-  .timer-display { font-size: 12px !important; padding: 3px 6px !important; }
-
-  /* Kanban */
-  .kanban-col { min-width: 280px; }
-
-  /* Calendar */
-  .cal-header { font-size: 13px; }
-
-  /* Hide some less important columns on mobile */
-  td[data-col="leadtime"],
-  td[data-col="tempo"] { display: none; }
-}
-
-@media (max-width: 400px) {
-  .kpi-grid { grid-template-columns: 1fr; }
-  .topbar-title { font-size: 13px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-}
-
 @media print {
       body { background: white; padding: 0; }
       @page { margin: 10mm; size: A4; }
