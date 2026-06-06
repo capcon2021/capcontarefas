@@ -1134,7 +1134,7 @@ async function sbDelete(table, id) {
 // Mapear snake_case do banco → camelCase local
 function mapCliente(r) { return { id: r.id, nome: r.nome, contato: r.contato||'', whatsapp: r.whatsapp||'', email: r.email||'', cnpj: r.cnpj||'', endereco: r.endereco||'', valor: parseFloat(r.valor||0), vencimento: parseInt(r.vencimento||10), obs: r.obs||'', aniversario: r.aniversario||'' }; }
 function mapMens(r) { return { id: r.id, clienteId: r.cliente_id, desc: r.descricao||'', valor: parseFloat(r.valor||0), vencimento: r.vencimento||'', ref: r.referencia||'', status: r.status||'em_aberto', forma: r.forma||'', dataPagto: r.data_pagto||'', enviadoEm: r.enviado_em||'', concluidoEm: r.concluido_em||'' }; }
-function mapTarefa(r) { return { id: r.id, clienteId: r.cliente_id, nome: r.nome||'', desc: r.descricao||'', inicio: r.inicio||'', fim: r.fim||'', status: r.status||'nao_iniciado', prioridade: r.prioridade||'normal', tempoGasto: parseInt(r.tempo_gasto||0), timerRunning: false }; }
+function mapTarefa(r) { return { id: r.id, clienteId: r.cliente_id, nome: r.nome||'', desc: r.descricao||'', inicio: r.inicio||'', fim: r.fim||'', status: r.status||'nao_iniciado', prioridade: r.prioridade||'normal', tempoGasto: parseInt(r.tempo_gasto||0), timerStart: r.timer_start||null, timerRunning: false }; }
 function mapReuniao(r) { return { id: r.id, titulo: r.titulo||'', data: r.data||'', hora: r.hora||'', duracao: parseInt(r.duracao||60), clienteId: r.cliente_id||0, obs: r.obs||'' }; }
 
 // Estado local (espelho em memória do banco)
@@ -2368,17 +2368,25 @@ async function concluirTarefa(id) {
   renderTarefas(); renderConcluidas(); renderProjetos(); renderDashTasks();
 }
 
-function toggleTimer(id) {
+async function toggleTimer(id) {
   const t = tarefas.find(x=>x.id===id);
   if (t.timerRunning) {
+    // Parar timer - calcula tempo acumulado e zera timer_start
     clearInterval(timerIntervals[id]);
     delete timerIntervals[id];
     t.timerRunning = false;
+    t.timerStart = null;
+    await sbUpdate('tarefas', id, { tempo_gasto: t.tempoGasto, timer_start: null });
+    salvarDB();
     document.getElementById('btn-timer-'+id).textContent='▶';
     document.getElementById('btn-timer-'+id).className='btn btn-sm btn-success';
   } else {
+    // Iniciar timer - salva horário de início no Supabase
     t.timerRunning = true;
+    t.timerStart = new Date().toISOString();
     if (t.status === 'nao_iniciado') t.status = 'em_andamento';
+    await sbUpdate('tarefas', id, { timer_start: t.timerStart, status: t.status });
+    salvarDB();
     document.getElementById('btn-timer-'+id).textContent='⏸';
     document.getElementById('btn-timer-'+id).className='btn btn-sm btn-danger';
     startTimerInterval(id);
@@ -2393,9 +2401,23 @@ function startTimerInterval(id) {
     t.tempoGasto++;
     const el = document.getElementById('timer-'+id);
     if (el) el.textContent = fmtTempo(t.tempoGasto);
-    // Salvar a cada 30 segundos
-    if (t.tempoGasto % 30 === 0) { salvarDB(); sbUpdate("tarefas", id, { tempo_gasto: t.tempoGasto }); }
+    if (t.tempoGasto % 60 === 0) { salvarDB(); sbUpdate('tarefas', id, { tempo_gasto: t.tempoGasto }); }
   }, 1000);
+}
+
+// Ao carregar, retoma timers que estavam rodando (usando timer_start salvo no Supabase)
+function retornarTimersAtivos() {
+  tarefas.forEach(t => {
+    if (t.timerStart) {
+      // Calcula tempo que passou desde que o timer foi iniciado
+      const segundosPassados = Math.floor((Date.now() - new Date(t.timerStart).getTime()) / 1000);
+      t.tempoGasto += segundosPassados;
+      t.timerStart = null; // zera para não somar de novo
+      t.timerRunning = true;
+      sbUpdate('tarefas', t.id, { tempo_gasto: t.tempoGasto, timer_start: null });
+      startTimerInterval(t.id);
+    }
+  });
 }
 
 async function saveTarefa() {
@@ -3236,6 +3258,7 @@ async function initApp() {
   const dtAno = document.getElementById('dt-ano');
   if (dtAno) { const opt = dtAno.querySelector(`option[value="${new Date().getFullYear()}"]`); if(opt) opt.selected=true; }
   iniciarAutoRefresh();
+  retornarTimersAtivos();
 }
 </script>
 </body>
