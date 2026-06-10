@@ -2143,7 +2143,7 @@ function valorPorExtenso(n) {
 }
 
 function buildReciboHTML(m, cli, num, cnpj, endereco, pix, banco) {
-  const dataPagto = m.dataPagto || new Date().toISOString().split('T')[0];
+  const dataPagto = m.vencimento || m.dataPagto || new Date().toISOString().split('T')[0];
   const dt = new Date(dataPagto + 'T12:00');
   const dia = dt.getDate();
   const mesPorExtenso = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][dt.getMonth()];
