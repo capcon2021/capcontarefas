@@ -1099,36 +1099,55 @@ let timerIntervals = {};
 // ============================================================
 // SUPABASE CONFIG
 // ============================================================
-const SUPABASE_URL = 'https://majgwuryfqifbqkfolho.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hamd3dXJ5ZnFpZmJxa2ZvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NDEyNjYsImV4cCI6MjA5NjAxNzI2Nn0.StVg5Ucoi65WeWrZqa-YajUJODgfRWsumt464coUmcg';
+const SUPABASE_URL = 'https://wduewntvzmqzdztifmsu.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndkdWV3bnR2em1xemR6dGlmbXN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMDQ1NDIsImV4cCI6MjA5Njc4MDU0Mn0.8Za6FyfMdjRaOCP41G377xdOh3RgnCFhXjmed10imWs';
 const SB_HEADERS = { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer': 'return=representation' };
 
 async function sbGet(table, params = '') {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
   try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?order=id${params}`, { headers: SB_HEADERS });
-    if (!r.ok) { console.error('sbGet erro:', table, await r.text()); return []; }
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?order=id${params}`, { headers: SB_HEADERS, signal: controller.signal });
+    clearTimeout(timeout);
+    if (!r.ok) {
+      const msg = await r.text();
+      console.error('sbGet erro:', table, msg);
+      throw new Error(`sbGet ${table}: ${r.status} ${msg}`);
+    }
     return r.json();
-  } catch(e) { console.error('sbGet falhou:', table, e); return []; }
+  } catch(e) {
+    clearTimeout(timeout);
+    throw e;
+  }
 }
 async function sbInsert(table, data) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
   try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(data) });
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(data), signal: controller.signal });
+    clearTimeout(timeout);
     const body = await r.json();
     if (!r.ok) { console.error('sbInsert erro:', table, body); return null; }
     return Array.isArray(body) ? body[0] : body;
-  } catch(e) { console.error('sbInsert falhou:', table, e); return null; }
+  } catch(e) { clearTimeout(timeout); console.error('sbInsert falhou:', table, e); return null; }
 }
 async function sbUpdate(table, id, data) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
   try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, { method: 'PATCH', headers: SB_HEADERS, body: JSON.stringify(data) });
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, { method: 'PATCH', headers: SB_HEADERS, body: JSON.stringify(data), signal: controller.signal });
+    clearTimeout(timeout);
     if (!r.ok) console.error('sbUpdate erro:', table, id, await r.text());
-  } catch(e) { console.error('sbUpdate falhou:', table, e); }
+  } catch(e) { clearTimeout(timeout); console.error('sbUpdate falhou:', table, e); }
 }
 async function sbDelete(table, id) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
   try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, { method: 'DELETE', headers: SB_HEADERS });
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, { method: 'DELETE', headers: SB_HEADERS, signal: controller.signal });
+    clearTimeout(timeout);
     if (!r.ok) console.error('sbDelete erro:', table, id, await r.text());
-  } catch(e) { console.error('sbDelete falhou:', table, e); }
+  } catch(e) { clearTimeout(timeout); console.error('sbDelete falhou:', table, e); }
 }
 
 // Mapear snake_case do banco → camelCase local
@@ -3184,10 +3203,22 @@ async function sincronizarDados(silencioso = false) {
       sbGet('tarefas'),
       sbGet('reunioes'),
     ]);
-    clientes     = (cliRows  || []).map(mapCliente);
-    mensalidades = (mensRows || []).map(mapMens);
-    tarefas      = (tarRows  || []).map(mapTarefa).map(t => ({ ...t, timerRunning: false }));
-    reunioes     = (reuRows  || []).map(mapReuniao);
+    const novosClientes     = (cliRows  || []).map(mapCliente);
+    const novasMensalidades = (mensRows || []).map(mapMens);
+    const novasTarefas      = (tarRows  || []).map(mapTarefa).map(t => ({ ...t, timerRunning: false }));
+    const novasReunioes     = (reuRows  || []).map(mapReuniao);
+    // Proteção: não sobrescreve dados locais se o Supabase retornou tudo vazio
+    const totalNovos = novosClientes.length + novasMensalidades.length + novasTarefas.length + novasReunioes.length;
+    const totalAtual = clientes.length + mensalidades.length + tarefas.length + reunioes.length;
+    if (totalNovos === 0 && totalAtual > 0) {
+      if (statusEl) statusEl.textContent = '⚠ Sem dados recebidos';
+      if (btnEl) btnEl.disabled = false;
+      return;
+    }
+    clientes     = novosClientes;
+    mensalidades = novasMensalidades;
+    tarefas      = novasTarefas;
+    reunioes     = novasReunioes;
     nextId.cli  = clientes.length     ? Math.max(...clientes.map(c=>c.id))     + 1 : 1;
     nextId.mens = mensalidades.length ? Math.max(...mensalidades.map(m=>m.id)) + 1 : 1;
     nextId.tar  = tarefas.length      ? Math.max(...tarefas.map(t=>t.id))      + 1 : 1;
@@ -3212,6 +3243,7 @@ async function sincronizarDados(silencioso = false) {
     const agora = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
     if (statusEl) statusEl.textContent = `✓ ${agora}`;
   } catch(e) {
+    console.error('sincronizarDados falhou:', e);
     if (statusEl) statusEl.textContent = '⚠ Offline';
   }
   if (btnEl) btnEl.disabled = false;
