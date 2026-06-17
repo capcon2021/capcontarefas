@@ -405,7 +405,11 @@ tr:hover td { background: #fafafa; }
         </button>
       </div>
     </div>
-    <button class="btn-login" onclick="doLogin()" style="margin-top:20px;">Entrar</button>
+    <div style="display:flex;align-items:center;gap:8px;margin:14px 0 8px;">
+      <input type="checkbox" id="lembrar-senha" style="width:16px;height:16px;accent-color:#F47B20;cursor:pointer;">
+      <label for="lembrar-senha" style="font-size:13px;color:#6b7280;cursor:pointer;font-weight:600;">Lembrar senha</label>
+    </div>
+    <button class="btn-login" onclick="doLogin()" style="margin-top:8px;">Entrar</button>
     <div class="login-error" id="login-error">Usuário ou senha incorretos.</div>
     <div style="text-align:center;margin-top:16px;font-size:12px;color:#6b7280;">
       Acesso restrito — contate o administrador
@@ -1208,9 +1212,29 @@ function toggleSenha() {
   }
 }
 
+// Carregar credenciais salvas ao iniciar (se "Lembrar senha" estava marcado)
+(function loadSaved() {
+  try {
+    const saved = localStorage.getItem('cap_login');
+    if (saved) {
+      const { user, pass } = JSON.parse(saved);
+      document.getElementById('inp-user').value = user || '';
+      document.getElementById('inp-pass').value = pass || '';
+      document.getElementById('lembrar-senha').checked = true;
+    }
+  } catch(e) {}
+})();
+
 function doLogin() {
   const user = document.getElementById('inp-user').value.trim().toLowerCase();
   const pass = document.getElementById('inp-pass').value.trim();
+  const lembrar = document.getElementById('lembrar-senha').checked;
+
+  if (lembrar) {
+    localStorage.setItem('cap_login', JSON.stringify({ user, pass }));
+  } else {
+    localStorage.removeItem('cap_login');
+  }
 
   if (USERS[user] && USERS[user].pass === pass) {
     currentUser = { key: user, ...USERS[user] };
@@ -1235,6 +1259,17 @@ function doLogout() {
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('login-error').style.display = 'none';
+  // Limpa o campo de senha ao sair; se "Lembrar senha" estiver marcado, recarrega do que foi salvo
+  const lembrar = document.getElementById('lembrar-senha').checked;
+  if (lembrar) {
+    try {
+      const saved = localStorage.getItem('cap_login');
+      const pass = saved ? (JSON.parse(saved).pass || '') : '';
+      document.getElementById('inp-pass').value = pass;
+    } catch(e) { document.getElementById('inp-pass').value = ''; }
+  } else {
+    document.getElementById('inp-pass').value = '';
+  }
 }
 
 // ============================================================
