@@ -565,6 +565,23 @@ tr:hover td { background: #fafafa; }
         <div class="page-header">
           <div><div class="page-title">Concluído</div><div class="page-sub">Pagamentos finalizados</div></div>
         </div>
+        <div class="filters">
+          <select id="fil-receb-cli" onchange="renderRecebidos()">
+            <option value="">Todos os clientes</option>
+          </select>
+          <select id="fil-receb-mes" onchange="renderRecebidos()">
+            <option value="">Todos os meses</option>
+            <option value="1">Janeiro</option><option value="2">Fevereiro</option>
+            <option value="3">Março</option><option value="4">Abril</option>
+            <option value="5">Maio</option><option value="6">Junho</option>
+            <option value="7">Julho</option><option value="8">Agosto</option>
+            <option value="9">Setembro</option><option value="10">Outubro</option>
+            <option value="11">Novembro</option><option value="12">Dezembro</option>
+          </select>
+          <select id="fil-receb-ano" onchange="renderRecebidos()">
+            <option value="">Todos os anos</option>
+          </select>
+        </div>
         <div class="kpi-grid" id="kpi-recebidos"></div>
         <div class="card">
           <div class="card-body">
@@ -630,6 +647,23 @@ tr:hover td { background: #fafafa; }
       <div class="screen" id="screen-concluidas">
         <div class="page-header">
           <div><div class="page-title">Tarefas Concluídas</div><div class="page-sub">Histórico de entregas</div></div>
+        </div>
+        <div class="filters">
+          <select id="fil-conc-cli" onchange="renderConcluidas()">
+            <option value="">Todos os clientes</option>
+          </select>
+          <select id="fil-conc-mes" onchange="renderConcluidas()">
+            <option value="">Todos os meses</option>
+            <option value="1">Janeiro</option><option value="2">Fevereiro</option>
+            <option value="3">Março</option><option value="4">Abril</option>
+            <option value="5">Maio</option><option value="6">Junho</option>
+            <option value="7">Julho</option><option value="8">Agosto</option>
+            <option value="9">Setembro</option><option value="10">Outubro</option>
+            <option value="11">Novembro</option><option value="12">Dezembro</option>
+          </select>
+          <select id="fil-conc-ano" onchange="renderConcluidas()">
+            <option value="">Todos os anos</option>
+          </select>
         </div>
         <div class="card">
           <div class="card-body">
@@ -1631,10 +1665,11 @@ function fmtTempo(seg) {
 // POPULATE CLIENT SELECTS
 // ============================================================
 function updateClienteSelects() {
-  ['mens-cliente','tar-cliente','fil-tar-cli'].forEach(id => {
+  const filterIds = ['fil-tar-cli','fil-conc-cli','fil-receb-cli'];
+  ['mens-cliente','tar-cliente', ...filterIds].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-    const isFilter = id === 'fil-tar-cli';
+    const isFilter = filterIds.includes(id);
     const cur = el.value;
     el.innerHTML = isFilter ? '<option value="">Todos os clientes</option>' : '<option value="">Selecione...</option>';
     clientes.forEach(c => {
@@ -1961,7 +1996,28 @@ async function voltarEnviado(id) {
 // CONCLUÍDO (recebidos)
 // ============================================================
 function renderRecebidos() {
-  const rows = mensalidades.filter(m => m.status === 'recebido');
+  updateClienteSelects();
+  // Popular anos dinamicamente
+  const anrEl = document.getElementById('fil-receb-ano');
+  if (anrEl && anrEl.options.length <= 1) {
+    const anos = [...new Set(mensalidades.filter(m=>m.status==='recebido').map(m => (m.dataPagto||m.vencimento||'').substring(0,4)).filter(Boolean))].sort().reverse();
+    anos.forEach(a => { const o = document.createElement('option'); o.value=a; o.textContent=a; anrEl.appendChild(o); });
+  }
+  const fc = document.getElementById('fil-receb-cli').value;
+  const fm = document.getElementById('fil-receb-mes').value;
+  const fa = document.getElementById('fil-receb-ano').value;
+  const rows = mensalidades.filter(m => {
+    if (m.status !== 'recebido') return false;
+    if (fc && m.clienteId != fc) return false;
+    if (fm || fa) {
+      const ref = m.dataPagto || m.vencimento || '';
+      if (!ref) return false;
+      const partes = ref.split('-');
+      if (fa && partes[0] !== fa) return false;
+      if (fm && parseInt(partes[1]) !== parseInt(fm)) return false;
+    }
+    return true;
+  });
   const total = rows.reduce((s,m)=>s+m.valor,0);
   document.getElementById('kpi-recebidos').innerHTML = `
     <div class="kpi-card"><div class="kpi-label">Total Recebido</div><div class="kpi-value" style="color:var(--success);">${fmt(total)}</div></div>
@@ -2523,7 +2579,28 @@ document.querySelector('[onclick="openModal(\'modal-tarefa\')"]').onclick = () =
 // CONCLUÍDAS
 // ============================================================
 function renderConcluidas() {
-  const rows = tarefas.filter(t=>t.status==='concluido');
+  updateClienteSelects();
+  // Popular anos dinamicamente
+  const ancEl = document.getElementById('fil-conc-ano');
+  if (ancEl && ancEl.options.length <= 1) {
+    const anos = [...new Set(tarefas.filter(t=>t.status==='concluido').map(t => (t.fim||t.inicio||'').substring(0,4)).filter(Boolean))].sort().reverse();
+    anos.forEach(a => { const o = document.createElement('option'); o.value=a; o.textContent=a; ancEl.appendChild(o); });
+  }
+  const fc = document.getElementById('fil-conc-cli').value;
+  const fm = document.getElementById('fil-conc-mes').value;
+  const fa = document.getElementById('fil-conc-ano').value;
+  const rows = tarefas.filter(t => {
+    if (t.status !== 'concluido') return false;
+    if (fc && t.clienteId != fc) return false;
+    if (fm || fa) {
+      const ref = t.fim || t.inicio || '';
+      if (!ref) return false;
+      const partes = ref.split('-');
+      if (fa && partes[0] !== fa) return false;
+      if (fm && parseInt(partes[1]) !== parseInt(fm)) return false;
+    }
+    return true;
+  });
   const tb = document.getElementById('tb-concluidas');
   if (!rows.length) { tb.innerHTML='<tr><td colspan="8" class="empty-state">Nenhuma tarefa concluída.</td></tr>'; return; }
   tb.innerHTML = rows.map(t=>`
