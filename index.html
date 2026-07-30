@@ -1113,7 +1113,7 @@ const ALL_SCREENS = [
 // carregada sob demanda pela tela "Usuários e Permissões" via Supabase.
 let USERS = {};
 async function carregarUsuarios() {
-  const { data, error } = await supabase
+  const { data, error } = await sbClient
     .from('profiles')
     .select('id, name, email, is_admin, screens')
     .order('name', { ascending: true });
@@ -1146,12 +1146,12 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // Cliente oficial: gerencia login, refresh de token e anexa automaticamente
 // o JWT do usuário autenticado em cada requisição (isso é o que faz o RLS
 // enxergar "auth.uid()" e aplicar as políticas de acesso corretas).
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
 });
 
 async function sbGet(table) {
-  const { data, error } = await supabase.from(table).select('*').order('id', { ascending: true });
+  const { data, error } = await sbClient.from(table).select('*').order('id', { ascending: true });
   if (error) {
     console.error('sbGet erro:', table, error.message);
     throw new Error(`sbGet ${table}: ${error.message}`);
@@ -1159,16 +1159,16 @@ async function sbGet(table) {
   return data;
 }
 async function sbInsert(table, data) {
-  const { data: inserted, error } = await supabase.from(table).insert(data).select().single();
+  const { data: inserted, error } = await sbClient.from(table).insert(data).select().single();
   if (error) { console.error('sbInsert erro:', table, error.message); return null; }
   return inserted;
 }
 async function sbUpdate(table, id, data) {
-  const { error } = await supabase.from(table).update(data).eq('id', id);
+  const { error } = await sbClient.from(table).update(data).eq('id', id);
   if (error) console.error('sbUpdate erro:', table, id, error.message);
 }
 async function sbDelete(table, id) {
-  const { error } = await supabase.from(table).delete().eq('id', id);
+  const { error } = await sbClient.from(table).delete().eq('id', id);
   if (error) console.error('sbDelete erro:', table, id, error.message);
 }
 
@@ -1239,7 +1239,7 @@ function toggleSenha() {
 // Busca o perfil (nome, admin?, telas liberadas) do usuário autenticado.
 // A leitura da própria linha em `profiles` é sempre permitida pelo RLS.
 async function carregarPerfil(authUser) {
-  const { data, error } = await supabase
+  const { data, error } = await sbClient
     .from('profiles')
     .select('id, name, is_admin, screens, email')
     .eq('id', authUser.id)
@@ -1275,7 +1275,7 @@ async function doLogin() {
   errEl.style.display = 'none';
   if (btn) { btn.disabled = true; btn.textContent = 'Entrando...'; }
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+    const { data, error } = await sbClient.auth.signInWithPassword({ email, password: pass });
     if (error || !data.user) {
       errEl.textContent = 'E-mail ou senha incorretos.';
       errEl.style.display = 'block';
@@ -1285,7 +1285,7 @@ async function doLogin() {
     if (!perfil) {
       errEl.textContent = 'Login efetuado, mas o perfil não foi encontrado. Contate o administrador.';
       errEl.style.display = 'block';
-      await supabase.auth.signOut();
+      await sbClient.auth.signOut();
       return;
     }
     currentUser = perfil;
@@ -1306,7 +1306,7 @@ async function doLogout() {
   Object.values(timerIntervals).forEach(clearInterval);
   timerIntervals = {};
   tarefas.forEach(t => t.timerRunning = false);
-  await supabase.auth.signOut();
+  await sbClient.auth.signOut();
   currentUser = null;
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
@@ -1319,10 +1319,10 @@ async function doLogout() {
 // substituto correto do antigo "lembrar senha".
 (async function tentarRetomarSessao() {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await sbClient.auth.getSession();
     if (!session || !session.user) return;
     const perfil = await carregarPerfil(session.user);
-    if (!perfil) { await supabase.auth.signOut(); return; }
+    if (!perfil) { await sbClient.auth.signOut(); return; }
     currentUser = perfil;
     entrarNoApp();
   } catch (e) {
@@ -1586,7 +1586,7 @@ async function salvarUsuario() {
       // pode rodar no servidor (nunca no navegador) — por isso passamos
       // pela Edge Function `admin-users`, que confere no backend se quem
       // está chamando é realmente um administrador antes de agir.
-      const { error } = await supabase.functions.invoke('admin-users', {
+      const { error } = await sbClient.functions.invoke('admin-users', {
         body: { action: 'create', email, password: senha, name: nome, screens }
       });
       if (error) { alert('Não foi possível criar o usuário: ' + error.message); return; }
@@ -1594,14 +1594,14 @@ async function salvarUsuario() {
       // Editar usuário existente: nome/telas são atualizados diretamente
       // (permitido pelo RLS só para administradores). Senha, se informada,
       // também exige a Edge Function.
-      const { error: errProfile } = await supabase
+      const { error: errProfile } = await sbClient
         .from('profiles')
         .update({ name: nome, screens })
         .eq('id', keyOrig);
       if (errProfile) { alert('Não foi possível atualizar o usuário: ' + errProfile.message); return; }
 
       if (senha) {
-        const { error: errPass } = await supabase.functions.invoke('admin-users', {
+        const { error: errPass } = await sbClient.functions.invoke('admin-users', {
           body: { action: 'set-password', user_id: keyOrig, password: senha }
         });
         if (errPass) { alert('Perfil salvo, mas a senha não pôde ser alterada: ' + errPass.message); }
@@ -1620,7 +1620,7 @@ async function excluirUsuario() {
   if (!key || key === currentUser.key) { alert('Não é possível excluir este usuário.'); return; }
   if (!confirm('Excluir este usuário? Esta ação não pode ser desfeita.')) return;
   try {
-    const { error } = await supabase.functions.invoke('admin-users', {
+    const { error } = await sbClient.functions.invoke('admin-users', {
       body: { action: 'delete', user_id: key }
     });
     if (error) { alert('Não foi possível excluir o usuário: ' + error.message); return; }
