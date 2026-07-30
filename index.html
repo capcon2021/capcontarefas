@@ -388,8 +388,8 @@ tr:hover td { background: #fafafa; }
     <div class="login-title">Sistema de Gestão</div>
     <div class="login-sub">Faça login para continuar</div>
     <div class="form-group">
-      <label>Usuário</label>
-      <input type="text" id="inp-user" placeholder="Digite seu usuário" autocomplete="off">
+      <label>E-mail</label>
+      <input type="email" id="inp-user" placeholder="Digite seu e-mail" autocomplete="username">
     </div>
     <div class="form-group">
       <label>Senha</label>
@@ -406,8 +406,8 @@ tr:hover td { background: #fafafa; }
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:8px;margin:14px 0 8px;">
-      <input type="checkbox" id="lembrar-senha" style="width:16px;height:16px;accent-color:#F47B20;cursor:pointer;">
-      <label for="lembrar-senha" style="font-size:13px;color:#6b7280;cursor:pointer;font-weight:600;">Lembrar senha</label>
+      <input type="checkbox" id="lembrar-senha" checked disabled style="width:16px;height:16px;accent-color:#F47B20;cursor:not-allowed;">
+      <label for="lembrar-senha" style="font-size:13px;color:#6b7280;cursor:not-allowed;font-weight:600;">Manter conectado neste dispositivo</label>
     </div>
     <button class="btn-login" onclick="doLogin()" style="margin-top:8px;">Entrar</button>
     <div class="login-error" id="login-error">Usuário ou senha incorretos.</div>
@@ -1023,8 +1023,8 @@ tr:hover td { background: #fafafa; }
       <button class="modal-close" onclick="closeModal('modal-usuario')">✕</button>
     </div>
     <div class="form-grid" style="margin-bottom:20px;">
-      <div class="field"><label>Login (nome de acesso) *</label>
-        <input type="text" id="usr-login" placeholder="Ex: joao" autocomplete="off">
+      <div class="field"><label>E-mail (login) *</label>
+        <input type="email" id="usr-login" placeholder="Ex: joao@empresa.com" autocomplete="off">
       </div>
       <div class="field"><label>Nome de exibição *</label>
         <input type="text" id="usr-nome" placeholder="Ex: João Silva">
@@ -1084,6 +1084,9 @@ tr:hover td { background: #fafafa; }
   </div>
 </div>
 
+<!-- Cliente oficial do Supabase (necessário para Auth + RLS) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
 // ============================================================
 // DATA
@@ -1106,20 +1109,22 @@ const ALL_SCREENS = [
   { id: 'dashboard-tasks', label: 'Dashboard Tarefas',     section: 'Projetos'   },
 ];
 
-// Carregar usuários do localStorage (ou usar padrão)
-function loadUsers() {
-  try {
-    const saved = localStorage.getItem('cap_users');
-    if (saved) return JSON.parse(saved);
-  } catch(e) {}
-  return {
-    admin:      { pass: 'S,kyar@_2025', name: 'Administrador', isAdmin: true,  screens: ALL_SCREENS.map(s=>s.id) },
-  };
+// Cache local (em memória, nunca em localStorage) da lista de usuários/perfis,
+// carregada sob demanda pela tela "Usuários e Permissões" via Supabase.
+let USERS = {};
+async function carregarUsuarios() {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, name, email, is_admin, screens')
+    .order('name', { ascending: true });
+  if (error) { console.error('Erro ao carregar usuários:', error.message); return {}; }
+  const map = {};
+  (data || []).forEach(p => {
+    map[p.id] = { name: p.name, email: p.email, isAdmin: !!p.is_admin, screens: p.screens || [] };
+  });
+  USERS = map;
+  return map;
 }
-function saveUsers(users) {
-  localStorage.setItem('cap_users', JSON.stringify(users));
-}
-let USERS = loadUsers();
 
 let currentUser = null;
 let editingClienteId = null;
@@ -1131,55 +1136,40 @@ let timerIntervals = {};
 // ============================================================
 // SUPABASE CONFIG
 // ============================================================
+// A "anon key" abaixo é PÚBLICA por design do Supabase (ela vai visível no
+// HTML de qualquer app cliente) — a segurança real vem do Row Level Security
+// (RLS) configurado nas tabelas via supabase_setup.sql. NUNCA coloque aqui a
+// "service_role key": essa sim é secreta e nunca pode aparecer no navegador.
 const SUPABASE_URL = 'https://wduewntvzmqzdztifmsu.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndkdWV3bnR2em1xemR6dGlmbXN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMDQ1NDIsImV4cCI6MjA5Njc4MDU0Mn0.8Za6FyfMdjRaOCP41G377xdOh3RgnCFhXjmed10imWs';
-const SB_HEADERS = { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer': 'return=representation' };
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndkdWV3bnR2em1xemR6dGlmbXN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMDQ1NDIsImV4cCI6MjA5Njc4MDU0Mn0.8Za6FyfMdjRaOCP41G377xdOh3RgnCFhXjmed10imWs';
 
-async function sbGet(table, params = '') {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
-  try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?order=id${params}`, { headers: SB_HEADERS, signal: controller.signal });
-    clearTimeout(timeout);
-    if (!r.ok) {
-      const msg = await r.text();
-      console.error('sbGet erro:', table, msg);
-      throw new Error(`sbGet ${table}: ${r.status} ${msg}`);
-    }
-    return r.json();
-  } catch(e) {
-    clearTimeout(timeout);
-    throw e;
+// Cliente oficial: gerencia login, refresh de token e anexa automaticamente
+// o JWT do usuário autenticado em cada requisição (isso é o que faz o RLS
+// enxergar "auth.uid()" e aplicar as políticas de acesso corretas).
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
+});
+
+async function sbGet(table) {
+  const { data, error } = await supabase.from(table).select('*').order('id', { ascending: true });
+  if (error) {
+    console.error('sbGet erro:', table, error.message);
+    throw new Error(`sbGet ${table}: ${error.message}`);
   }
+  return data;
 }
 async function sbInsert(table, data) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
-  try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(data), signal: controller.signal });
-    clearTimeout(timeout);
-    const body = await r.json();
-    if (!r.ok) { console.error('sbInsert erro:', table, body); return null; }
-    return Array.isArray(body) ? body[0] : body;
-  } catch(e) { clearTimeout(timeout); console.error('sbInsert falhou:', table, e); return null; }
+  const { data: inserted, error } = await supabase.from(table).insert(data).select().single();
+  if (error) { console.error('sbInsert erro:', table, error.message); return null; }
+  return inserted;
 }
 async function sbUpdate(table, id, data) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
-  try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, { method: 'PATCH', headers: SB_HEADERS, body: JSON.stringify(data), signal: controller.signal });
-    clearTimeout(timeout);
-    if (!r.ok) console.error('sbUpdate erro:', table, id, await r.text());
-  } catch(e) { clearTimeout(timeout); console.error('sbUpdate falhou:', table, e); }
+  const { error } = await supabase.from(table).update(data).eq('id', id);
+  if (error) console.error('sbUpdate erro:', table, id, error.message);
 }
 async function sbDelete(table, id) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
-  try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, { method: 'DELETE', headers: SB_HEADERS, signal: controller.signal });
-    clearTimeout(timeout);
-    if (!r.ok) console.error('sbDelete erro:', table, id, await r.text());
-  } catch(e) { clearTimeout(timeout); console.error('sbDelete falhou:', table, e); }
+  const { error } = await supabase.from(table).delete().eq('id', id);
+  if (error) console.error('sbDelete erro:', table, id, error.message);
 }
 
 // Mapear snake_case do banco → camelCase local
@@ -1232,7 +1222,7 @@ function showLoader(msg) {
 function hideLoader() { const el = document.getElementById('sb-loader'); if(el) el.style.display='none'; }
 
 // ============================================================
-// AUTH
+// AUTH (Supabase Auth — sessão real via JWT, nunca senha em texto puro)
 // ============================================================
 function toggleSenha() {
   const inp = document.getElementById('inp-pass');
@@ -1246,65 +1236,99 @@ function toggleSenha() {
   }
 }
 
-// Carregar credenciais salvas ao iniciar (se "Lembrar senha" estava marcado)
-(function loadSaved() {
-  try {
-    const saved = localStorage.getItem('cap_login');
-    if (saved) {
-      const { user, pass } = JSON.parse(saved);
-      document.getElementById('inp-user').value = user || '';
-      document.getElementById('inp-pass').value = pass || '';
-      document.getElementById('lembrar-senha').checked = true;
-    }
-  } catch(e) {}
-})();
-
-function doLogin() {
-  const user = document.getElementById('inp-user').value.trim().toLowerCase();
-  const pass = document.getElementById('inp-pass').value.trim();
-  const lembrar = document.getElementById('lembrar-senha').checked;
-
-  if (lembrar) {
-    localStorage.setItem('cap_login', JSON.stringify({ user, pass }));
-  } else {
-    localStorage.removeItem('cap_login');
+// Busca o perfil (nome, admin?, telas liberadas) do usuário autenticado.
+// A leitura da própria linha em `profiles` é sempre permitida pelo RLS.
+async function carregarPerfil(authUser) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, name, is_admin, screens, email')
+    .eq('id', authUser.id)
+    .single();
+  if (error || !data) {
+    console.error('Não foi possível carregar o perfil do usuário:', error?.message);
+    return null;
   }
+  return {
+    key: data.id,
+    name: data.name || authUser.email,
+    isAdmin: !!data.is_admin,
+    screens: data.screens || [],
+    email: data.email || authUser.email,
+  };
+}
 
-  if (USERS[user] && USERS[user].pass === pass) {
-    currentUser = { key: user, ...USERS[user] };
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    document.getElementById('sidebar-user').textContent = currentUser.name;
-    document.getElementById('topbar-user').textContent = currentUser.name;
-    document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
-    buildSidebar();
-    initApp();
-  } else {
-    document.getElementById('login-error').style.display = 'block';
+function entrarNoApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('sidebar-user').textContent = currentUser.name;
+  document.getElementById('topbar-user').textContent = currentUser.name;
+  document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  buildSidebar();
+  initApp();
+}
+
+async function doLogin() {
+  const email = document.getElementById('inp-user').value.trim().toLowerCase();
+  const pass = document.getElementById('inp-pass').value;
+  const btn = document.querySelector('.btn-login');
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+  if (btn) { btn.disabled = true; btn.textContent = 'Entrando...'; }
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+    if (error || !data.user) {
+      errEl.textContent = 'E-mail ou senha incorretos.';
+      errEl.style.display = 'block';
+      return;
+    }
+    const perfil = await carregarPerfil(data.user);
+    if (!perfil) {
+      errEl.textContent = 'Login efetuado, mas o perfil não foi encontrado. Contate o administrador.';
+      errEl.style.display = 'block';
+      await supabase.auth.signOut();
+      return;
+    }
+    currentUser = perfil;
+    document.getElementById('inp-pass').value = '';
+    entrarNoApp();
+  } catch (e) {
+    console.error('Falha no login:', e);
+    errEl.textContent = 'Não foi possível conectar. Tente novamente.';
+    errEl.style.display = 'block';
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Entrar'; }
   }
 }
 document.getElementById('inp-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 
-function doLogout() {
+async function doLogout() {
   if (_autoRefreshInterval) { clearInterval(_autoRefreshInterval); _autoRefreshInterval = null; }
   Object.values(timerIntervals).forEach(clearInterval);
   timerIntervals = {};
   tarefas.forEach(t => t.timerRunning = false);
+  await supabase.auth.signOut();
+  currentUser = null;
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('login-error').style.display = 'none';
-  // Limpa o campo de senha ao sair; se "Lembrar senha" estiver marcado, recarrega do que foi salvo
-  const lembrar = document.getElementById('lembrar-senha').checked;
-  if (lembrar) {
-    try {
-      const saved = localStorage.getItem('cap_login');
-      const pass = saved ? (JSON.parse(saved).pass || '') : '';
-      document.getElementById('inp-pass').value = pass;
-    } catch(e) { document.getElementById('inp-pass').value = ''; }
-  } else {
-    document.getElementById('inp-pass').value = '';
-  }
+  document.getElementById('inp-pass').value = '';
 }
+
+// Ao carregar a página, tenta retomar uma sessão válida (o Supabase mantém o
+// token de sessão — não a senha — de forma segura e renovável). Isso é o
+// substituto correto do antigo "lembrar senha".
+(async function tentarRetomarSessao() {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session || !session.user) return;
+    const perfil = await carregarPerfil(session.user);
+    if (!perfil) { await supabase.auth.signOut(); return; }
+    currentUser = perfil;
+    entrarNoApp();
+  } catch (e) {
+    console.warn('Não foi possível retomar a sessão anterior:', e);
+  }
+})();
 
 // ============================================================
 // NAVIGATION
@@ -1441,9 +1465,11 @@ function showScreenById(id, navEl) {
 // ============================================================
 // USUÁRIOS E PERMISSÕES
 // ============================================================
-function renderUsuarios() {
+async function renderUsuarios() {
   const el = document.getElementById('lista-usuarios');
   if (!el) return;
+  el.innerHTML = '<div style="padding:20px;color:var(--gray);">Carregando usuários...</div>';
+  await carregarUsuarios();
   const keys = Object.keys(USERS);
   el.innerHTML = keys.map(key => {
     const u = USERS[key];
@@ -1454,11 +1480,11 @@ function renderUsuarios() {
         <div style="display:flex;align-items:center;gap:12px;">
           <div style="width:40px;height:40px;border-radius:50%;background:${u.isAdmin?'var(--orange)':'var(--info)'};
             color:white;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;flex-shrink:0;">
-            ${u.name.charAt(0).toUpperCase()}
+            ${(u.name||'?').charAt(0).toUpperCase()}
           </div>
           <div>
             <div style="font-size:15px;font-weight:800;">${u.name}</div>
-            <div style="font-size:12px;color:var(--gray);">@${key} ${u.isAdmin?'· <span style="color:var(--orange);font-weight:700;">Administrador</span>':''}</div>
+            <div style="font-size:12px;color:var(--gray);">${u.email||''} ${u.isAdmin?'· <span style="color:var(--orange);font-weight:700;">Administrador</span>':''}</div>
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
@@ -1491,15 +1517,16 @@ function abrirModalUsuario() {
 
 function editarUsuario(key) {
   const u = USERS[key];
+  if (!u) return;
   document.getElementById('modal-usuario-title').textContent = '✏️ Editar Usuário';
-  document.getElementById('usr-login').value = key;
-  document.getElementById('usr-login').disabled = true; // não pode mudar o login
+  document.getElementById('usr-login').value = u.email || '';
+  document.getElementById('usr-login').disabled = true; // e-mail não pode ser trocado por aqui
   document.getElementById('usr-nome').value = u.name;
   document.getElementById('usr-senha').value = '';
   document.getElementById('usr-senha2').value = '';
   document.getElementById('usr-key-original').value = key;
-  // Não permite excluir o próprio usuário nem o admin principal
-  const canDelete = key !== currentUser.key && key !== 'admin';
+  // Não permite excluir o próprio usuário logado
+  const canDelete = key !== currentUser.key;
   document.getElementById('btn-excluir-usr').style.display = canDelete ? 'inline-flex' : 'none';
   buildPermsGrid(u.screens || []);
   openModal('modal-usuario');
@@ -1539,42 +1566,70 @@ function getSelectedScreens() {
   return [...document.querySelectorAll('#usr-perms-grid input[type=checkbox]:checked')].map(cb => cb.value);
 }
 
-function salvarUsuario() {
-  const key = document.getElementById('usr-login').value.trim().toLowerCase().replace(/\s+/g,'');
+async function salvarUsuario() {
+  const email = document.getElementById('usr-login').value.trim().toLowerCase();
   const nome = document.getElementById('usr-nome').value.trim();
   const senha = document.getElementById('usr-senha').value;
   const senha2 = document.getElementById('usr-senha2').value;
   const keyOrig = document.getElementById('usr-key-original').value;
   const screens = getSelectedScreens();
 
-  if (!key || !nome) { alert('Login e nome são obrigatórios.'); return; }
+  if (!email || !nome) { alert('E-mail e nome são obrigatórios.'); return; }
   if (!keyOrig && !senha) { alert('Informe uma senha para o novo usuário.'); return; }
   if (senha && senha !== senha2) { alert('As senhas não coincidem.'); return; }
   if (senha && senha.length < 6) { alert('A senha deve ter ao menos 6 caracteres.'); return; }
-  if (!keyOrig && USERS[key]) { alert('Este login já existe. Escolha outro.'); return; }
   if (screens.length === 0) { alert('Selecione ao menos uma tela para o usuário.'); return; }
 
-  const isAdmin = keyOrig ? (USERS[keyOrig]?.isAdmin || false) : false;
-  const passAtual = keyOrig ? USERS[keyOrig].pass : '';
-  USERS[key] = {
-    pass: senha || passAtual,
-    name: nome,
-    isAdmin,
-    screens,
-  };
-  saveUsers(USERS);
-  closeModal('modal-usuario');
-  renderUsuarios();
+  try {
+    if (!keyOrig) {
+      // Criar usuário novo: precisa da Admin API do Supabase Auth, que só
+      // pode rodar no servidor (nunca no navegador) — por isso passamos
+      // pela Edge Function `admin-users`, que confere no backend se quem
+      // está chamando é realmente um administrador antes de agir.
+      const { error } = await supabase.functions.invoke('admin-users', {
+        body: { action: 'create', email, password: senha, name: nome, screens }
+      });
+      if (error) { alert('Não foi possível criar o usuário: ' + error.message); return; }
+    } else {
+      // Editar usuário existente: nome/telas são atualizados diretamente
+      // (permitido pelo RLS só para administradores). Senha, se informada,
+      // também exige a Edge Function.
+      const { error: errProfile } = await supabase
+        .from('profiles')
+        .update({ name: nome, screens })
+        .eq('id', keyOrig);
+      if (errProfile) { alert('Não foi possível atualizar o usuário: ' + errProfile.message); return; }
+
+      if (senha) {
+        const { error: errPass } = await supabase.functions.invoke('admin-users', {
+          body: { action: 'set-password', user_id: keyOrig, password: senha }
+        });
+        if (errPass) { alert('Perfil salvo, mas a senha não pôde ser alterada: ' + errPass.message); }
+      }
+    }
+    closeModal('modal-usuario');
+    renderUsuarios();
+  } catch (e) {
+    console.error(e);
+    alert('Erro inesperado ao salvar o usuário.');
+  }
 }
 
-function excluirUsuario() {
+async function excluirUsuario() {
   const key = document.getElementById('usr-key-original').value;
-  if (!key || key === 'admin' || key === currentUser.key) { alert('Não é possível excluir este usuário.'); return; }
-  if (!confirm(`Excluir o usuário "${key}"?`)) return;
-  delete USERS[key];
-  saveUsers(USERS);
-  closeModal('modal-usuario');
-  renderUsuarios();
+  if (!key || key === currentUser.key) { alert('Não é possível excluir este usuário.'); return; }
+  if (!confirm('Excluir este usuário? Esta ação não pode ser desfeita.')) return;
+  try {
+    const { error } = await supabase.functions.invoke('admin-users', {
+      body: { action: 'delete', user_id: key }
+    });
+    if (error) { alert('Não foi possível excluir o usuário: ' + error.message); return; }
+    closeModal('modal-usuario');
+    renderUsuarios();
+  } catch (e) {
+    console.error(e);
+    alert('Erro inesperado ao excluir o usuário.');
+  }
 }
 
 function reuniaoDaTarefa(id) {
