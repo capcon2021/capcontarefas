@@ -481,6 +481,7 @@ tr:hover td { background: #fafafa; }
         <span id="topbar-date" style="font-size:12px;color:var(--gray);"></span>
         <span id="sync-status" style="font-size:11px;color:var(--gray);"></span>
         <button onclick="sincronizarDados()" id="btn-sync" title="Atualizar dados agora" style="background:var(--orange-light);color:var(--orange);border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;font-weight:700;">🔄 Atualizar</button>
+        <button onclick="baixarBackup()" id="btn-backup" title="Baixar backup de todos os dados (arquivo .json)" style="background:var(--gray-light);color:var(--gray-dark);border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;font-weight:700;">💾 Backup</button>
         <span class="user-badge" id="topbar-user">Admin</span>
       </div>
     </div>
@@ -856,9 +857,35 @@ tr:hover td { background: #fafafa; }
         <div id="lista-usuarios" style="display:grid;gap:16px;"></div>
       </div>
 
+      <!-- ===== BACKUPS ===== -->
+      <div class="screen" id="screen-backups">
+        <div class="page-header">
+          <div><div class="page-title">💾 Backups</div><div class="page-sub">Cópias automáticas diárias dos seus dados</div></div>
+          <button class="btn btn-secondary" onclick="baixarBackup()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Backup agora
+          </button>
+        </div>
+        <div id="backups-status" style="margin-bottom:16px;font-size:13px;color:var(--gray);"></div>
+        <div class="card">
+          <div class="card-body">
+            <table>
+              <thead><tr><th>Data</th><th>Clientes</th><th>Mensalidades</th><th>Etapas</th><th>Reuniões</th><th>Categorias</th><th>Ações</th></tr></thead>
+              <tbody id="tb-backups"></tbody>
+            </table>
+          </div>
+        </div>
+        <p style="margin-top:14px;font-size:12px;color:var(--gray);">
+          Os backups automáticos diários só aparecem aqui depois de configurar o agendamento no Supabase
+          (veja o arquivo <strong>supabase_backup_automatico.sql</strong>). O botão "Backup agora" sempre
+          funciona e baixa um arquivo na hora, independente dessa configuração.
+        </p>
+      </div>
+
       <!-- ===== ANIVERSÁRIOS ===== -->
       <div class="screen" id="screen-aniversarios">
         <div class="page-header">
+
           <div><div class="page-title">🎂 Aniversários</div><div class="page-sub">Aniversários dos clientes cadastrados</div></div>
         </div>
         <!-- Alertas do dia -->
@@ -1453,7 +1480,8 @@ const screenTitles = {
   'projetos': 'Projetos em Andamento',
   'concluidas': 'Projetos Concluídos',
   'dashboard-tasks': 'Dashboard de Projetos',
-  'usuarios': 'Usuários e Permissões'
+  'usuarios': 'Usuários e Permissões',
+  'backups': 'Backups'
 };
 
 // ============================================================
@@ -1511,13 +1539,17 @@ function buildSidebar() {
     html += `</div>`;
   });
 
-  // Linha admin: Usuários e Permissões
+  // Linha admin: Usuários e Permissões / Backups
   if (isAdmin) {
     html += `<div class="sidebar-section">
       <div class="sidebar-section-title">Administração</div>
       <div class="nav-item" onclick="showScreen('usuarios')" id="nav-usuarios">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icons['usuarios']}</svg>
         Usuários e Permissões
+      </div>
+      <div class="nav-item" onclick="showScreen('backups')" id="nav-backups">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
+        Backups
       </div>
     </div>`;
   }
@@ -1554,6 +1586,7 @@ function showScreen(id) {
     'concluidas': renderConcluidas,
     'dashboard-tasks': renderDashTasks,
     'usuarios': renderUsuarios,
+    'backups': renderBackups,
   };
   if (renders[id]) renders[id]();
 }
@@ -1573,6 +1606,7 @@ function showScreenById(id, navEl) {
     'categorias': renderCategorias,
     'projetos': renderProjetos, 'concluidas': renderConcluidas,
     'dashboard-tasks': renderDashTasks, 'usuarios': renderUsuarios,
+    'backups': renderBackups,
   };
   if (renders[id]) renders[id]();
 }
@@ -3640,6 +3674,126 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 let _ultimaSalvagem = 0;
+
+// ============================================================
+// HISTÓRICO DE BACKUPS AUTOMÁTICOS (tabela public.backups no Supabase,
+// alimentada 1x por dia pelo Cron Job — veja supabase_backup_automatico.sql)
+// ============================================================
+let backupsHistorico = [];
+
+async function carregarBackups() {
+  const statusEl = document.getElementById('backups-status');
+  if (statusEl) statusEl.textContent = '⟳ Carregando histórico de backups...';
+  try {
+    const { data, error } = await sbClient
+      .from('backups')
+      .select('id, gerado_em, dados')
+      .order('gerado_em', { ascending: false })
+      .limit(30);
+    if (error) throw error;
+    backupsHistorico = data || [];
+    if (statusEl) {
+      statusEl.textContent = backupsHistorico.length
+        ? `${backupsHistorico.length} backup(s) automático(s) disponível(is) — mais recente em ${fmtDataHora(backupsHistorico[0].gerado_em)}.`
+        : 'Nenhum backup automático encontrado ainda. Configure o agendamento (veja o rodapé desta tela) ou use "Backup agora".';
+    }
+  } catch (e) {
+    console.warn('Backups automáticos indisponíveis (tabela pode não existir ainda):', e.message||e);
+    backupsHistorico = [];
+    if (statusEl) statusEl.textContent = 'Backups automáticos ainda não configurados no Supabase. Use "Backup agora" enquanto isso, ou veja o supabase_backup_automatico.sql.';
+  }
+}
+
+function fmtDataHora(iso) {
+  try { return new Date(iso).toLocaleString('pt-BR'); } catch(e) { return iso; }
+}
+
+async function renderBackups() {
+  await carregarBackups();
+  const tb = document.getElementById('tb-backups');
+  if (!tb) return;
+  if (!backupsHistorico.length) {
+    tb.innerHTML = '<tr><td colspan="7"><div class="empty-state"><p>Nenhum backup automático ainda.</p></div></td></tr>';
+    return;
+  }
+  tb.innerHTML = backupsHistorico.map(b => {
+    const d = b.dados || {};
+    return `
+    <tr>
+      <td><strong>${fmtDataHora(b.gerado_em)}</strong></td>
+      <td>${(d.clientes||[]).length}</td>
+      <td>${(d.mensalidades||[]).length}</td>
+      <td>${(d.tarefas||[]).length}</td>
+      <td>${(d.reunioes||[]).length}</td>
+      <td>${(d.categorias||[]).length}</td>
+      <td><div class="action-row">
+        <button class="btn btn-sm btn-secondary" onclick="baixarBackupHistorico(${b.id})">⬇️ Baixar</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function baixarBackupHistorico(id) {
+  const b = backupsHistorico.find(x => x.id === id);
+  if (!b) return;
+  const backup = {
+    sistema: 'CAP Consultoria – Sistema de Gestão',
+    gerado_em: b.gerado_em,
+    origem: 'backup automático diário',
+    ...b.dados,
+  };
+  const json = JSON.stringify(backup, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const dataStr = (b.gerado_em || '').slice(0,10);
+  a.href = url;
+  a.download = `backup-cap-consultoria-${dataStr}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+
+// ============================================================
+// BACKUP MANUAL — baixa um arquivo .json com todos os dados do negócio
+// (clientes, mensalidades, projetos/etapas, reuniões e categorias).
+// Não inclui usuários/login (isso fica no Auth do Supabase — veja o
+// backup nativo do Supabase para esses dados).
+// ============================================================
+async function baixarBackup() {
+  const btn = document.getElementById('btn-backup');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Gerando...'; }
+  try {
+    const backup = {
+      sistema: 'CAP Consultoria – Sistema de Gestão',
+      gerado_em: new Date().toISOString(),
+      versao_dados: 1,
+      clientes,
+      mensalidades,
+      tarefas,
+      reunioes,
+      categorias,
+    };
+    const json = JSON.stringify(backup, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const dataStr = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+    a.href = url;
+    a.download = `backup-cap-consultoria-${dataStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  } catch (e) {
+    console.error('Erro ao gerar backup:', e);
+    alert('Não foi possível gerar o backup. Tente novamente.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Backup'; }
+  }
+}
 
 async function sincronizarDados(silencioso = false) {
   // Não sincroniza se houve salvamento nos últimos 5 segundos (evita sobrescrever)
