@@ -340,6 +340,38 @@ tr:hover td { background: #fafafa; }
   font-size: 13px; font-family: 'Nunito', sans-serif; outline: none; background: white;
 }
 
+/* CATEGORIA SWITCHER — caixa de seleção de categoria (estilo "trocar categoria") */
+.cat-switcher { position: relative; display: inline-block; }
+.cat-switcher-btn {
+  display: flex; align-items: center; gap: 10px; padding: 7px 12px 7px 8px;
+  border: 1.5px solid var(--border); border-radius: 10px; background: white;
+  cursor: pointer; font-size: 13px; font-weight: 800; font-family: 'Nunito', sans-serif;
+  color: var(--gray-dark); min-width: 190px; justify-content: space-between; transition: border-color .15s;
+}
+.cat-switcher-btn:hover { border-color: var(--orange); }
+.cat-switcher.open .cat-switcher-btn { border-color: var(--orange); box-shadow: 0 0 0 3px var(--orange-light); }
+.csb-left { display: flex; align-items: center; gap: 8px; overflow: hidden; }
+.csb-icon {
+  width: 24px; height: 24px; border-radius: 8px; display: flex; align-items: center;
+  justify-content: center; font-size: 13px; flex-shrink: 0;
+}
+.csb-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cat-switcher-chevron { flex-shrink: 0; opacity: .55; transition: transform .15s; }
+.cat-switcher.open .cat-switcher-chevron { transform: rotate(180deg); }
+.cat-switcher-menu {
+  position: absolute; top: calc(100% + 6px); left: 0; min-width: 220px; max-height: 280px;
+  overflow-y: auto; background: white; border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 14px 34px rgba(0,0,0,.14); z-index: 60; padding: 6px; display: none;
+}
+.cat-switcher.open .cat-switcher-menu { display: block; }
+.cat-switcher-item {
+  display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 8px;
+  cursor: pointer; font-size: 13px; font-weight: 700; color: var(--gray-dark);
+}
+.cat-switcher-item:hover { background: var(--gray-light); }
+.cat-switcher-item.active { background: var(--orange-light); color: var(--orange); }
+.cat-switcher-item .csb-icon { width: 20px; height: 20px; font-size: 11px; }
+
 /* TABS */
 .tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 20px; }
 .tab {
@@ -596,7 +628,7 @@ tr:hover td { background: #fafafa; }
       <!-- ===== TAREFAS (exibido como "Projetos") ===== -->
       <div class="screen" id="screen-tarefas">
         <div class="page-header">
-          <div><div class="page-title">Projetos</div><div class="page-sub">Criação e acompanhamento</div></div>
+          <div><div class="page-title">Etapas</div><div class="page-sub">Criação e acompanhamento</div></div>
           <button class="btn btn-primary" onclick="openModal('modal-tarefa')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Novo Projeto
@@ -612,9 +644,11 @@ tr:hover td { background: #fafafa; }
           <select id="fil-tar-cli" onchange="renderTarefas()">
             <option value="">Todos os clientes</option>
           </select>
-          <select id="fil-tar-categoria" onchange="renderTarefas()" title="Filtrar por categoria">
-            <option value="">Todas as categorias</option>
-          </select>
+          <div class="cat-switcher" id="catsw-fil-tar-categoria">
+            <select id="fil-tar-categoria" onchange="renderTarefas()" title="Filtrar por categoria" style="display:none">
+              <option value="">Todas as categorias</option>
+            </select>
+          </div>
           <select id="fil-tar-mes" onchange="renderTarefas()">
             <option value="">Todos os meses</option>
             <option value="1">Janeiro</option><option value="2">Fevereiro</option>
@@ -641,12 +675,14 @@ tr:hover td { background: #fafafa; }
       <!-- ===== PROJETOS EM ANDAMENTO (kanban) ===== -->
       <div class="screen" id="screen-projetos">
         <div class="page-header">
-          <div><div class="page-title">Projetos em Andamento</div><div class="page-sub">Visão kanban dos projetos</div></div>
+          <div><div class="page-title">Etapas em Andamento</div><div class="page-sub">Visão kanban dos projetos</div></div>
         </div>
         <div class="filters">
-          <select id="fil-kanban-categoria" onchange="renderProjetos()" title="Filtrar por categoria">
-            <option value="">Todas as categorias</option>
-          </select>
+          <div class="cat-switcher" id="catsw-fil-kanban-categoria">
+            <select id="fil-kanban-categoria" onchange="renderProjetos()" title="Filtrar por categoria" style="display:none">
+              <option value="">Todas as categorias</option>
+            </select>
+          </div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;" id="kanban-board"></div>
       </div>
@@ -654,15 +690,17 @@ tr:hover td { background: #fafafa; }
       <!-- ===== CONCLUÍDAS (exibido como "Projetos Concluídos") ===== -->
       <div class="screen" id="screen-concluidas">
         <div class="page-header">
-          <div><div class="page-title">Projetos Concluídos</div><div class="page-sub">Histórico de entregas</div></div>
+          <div><div class="page-title">Etapas Concluídas</div><div class="page-sub">Histórico de entregas</div></div>
         </div>
         <div class="filters">
           <select id="fil-conc-cli" onchange="renderConcluidas()">
             <option value="">Todos os clientes</option>
           </select>
-          <select id="fil-conc-categoria" onchange="renderConcluidas()" title="Filtrar por categoria">
-            <option value="">Todas as categorias</option>
-          </select>
+          <div class="cat-switcher" id="catsw-fil-conc-categoria">
+            <select id="fil-conc-categoria" onchange="renderConcluidas()" title="Filtrar por categoria" style="display:none">
+              <option value="">Todas as categorias</option>
+            </select>
+          </div>
           <select id="fil-conc-mes" onchange="renderConcluidas()">
             <option value="">Todos os meses</option>
             <option value="1">Janeiro</option><option value="2">Fevereiro</option>
@@ -708,9 +746,11 @@ tr:hover td { background: #fafafa; }
       <!-- ===== DASHBOARD DE PROJETOS ===== -->
       <div class="screen" id="screen-dashboard-tasks">
         <div class="filters">
-          <select id="dt-categoria" onchange="renderDashTasks()" title="Filtrar por categoria">
-            <option value="">Todas as categorias</option>
-          </select>
+          <div class="cat-switcher" id="catsw-dt-categoria">
+            <select id="dt-categoria" onchange="renderDashTasks()" title="Filtrar por categoria" style="display:none">
+              <option value="">Todas as categorias</option>
+            </select>
+          </div>
           <select id="dt-mes" onchange="renderDashTasks()">
             <option value="">Todos os meses</option>
             <option value="1">Janeiro</option><option value="2">Fevereiro</option>
@@ -1003,7 +1043,10 @@ tr:hover td { background: #fafafa; }
     </div>
     <div class="form-grid">
       <div class="field" style="grid-column:1/-1"><label>Nome *</label>
-        <input type="text" id="cat-nome" placeholder="Ex: Departamento Pessoal">
+        <input type="text" id="cat-nome" placeholder="Ex: Marketing">
+      </div>
+      <div class="field"><label>Ícone (emoji)</label>
+        <input type="text" id="cat-icone" placeholder="🎨" maxlength="4" style="text-align:center;font-size:18px;">
       </div>
       <div class="field"><label>Cor</label>
         <input type="color" id="cat-cor" value="#F47B20" style="height:38px;padding:3px;cursor:pointer;">
@@ -1238,7 +1281,7 @@ function mapMens(r) { return { id: r.id, clienteId: r.cliente_id, desc: r.descri
 function mapTarefa(r) { return { id: r.id, clienteId: r.cliente_id, categoriaId: r.categoria_id||null, nome: r.nome||'', desc: r.descricao||'', inicio: r.inicio||'', fim: r.fim||'', status: r.status||'nao_iniciado', prioridade: r.prioridade||'normal', tempoGasto: parseInt(r.tempo_gasto||0), timerStart: r.timer_start||null, timerRunning: false }; }
 function mapReuniao(r) { return { id: r.id, titulo: r.titulo||'', data: r.data||'', hora: r.hora||'', duracao: parseInt(r.duracao||60), clienteId: r.cliente_id||0, obs: r.obs||'' }; }
 // Categorias de projetos — tabela opcional 'categorias' no Supabase (veja supabase_categorias.sql)
-function mapCategoria(r) { return { id: r.id, nome: r.nome||'', cor: r.cor||'#F47B20' }; }
+function mapCategoria(r) { return { id: r.id, nome: r.nome||'', cor: r.cor||'#F47B20', icone: r.icone||'🏷️' }; }
 
 // Estado local (espelho em memória do banco)
 // ============================================================
@@ -1417,7 +1460,11 @@ const screenTitles = {
 // SIDEBAR DINÂMICA (baseada nas permissões do usuário)
 // ============================================================
 function buildSidebar() {
-  const perms = currentUser.screens || [];
+  const perms = [...(currentUser.screens || [])];
+  // "Categorias" é uma tela de apoio compartilhada: qualquer pessoa que já
+  // tenha acesso a Projetos também enxerga Categorias automaticamente, sem
+  // precisar que um admin marque essa permissão manualmente em cada usuário.
+  if (perms.includes('tarefas') && !perms.includes('categorias')) perms.push('categorias');
   const isAdmin = currentUser.isAdmin;
 
   const sections = {
@@ -1820,17 +1867,69 @@ function updateCategoriaSelects() {
       el.innerHTML += `<option value="${c.id}" ${cur==c.id?'selected':''}>${c.nome}</option>`;
     });
   });
+  filterIds.forEach(id => renderCategoriaSwitcher(id));
 }
+
+// Constrói a "caixa" visual de troca de categoria (ícone + nome + menu) em
+// cima do <select> escondido de mesmo id. O <select> continua sendo a fonte
+// de verdade (é nele que renderTarefas()/renderProjetos()/etc. leem o valor).
+function renderCategoriaSwitcher(selectId) {
+  const select = document.getElementById(selectId);
+  const wrap = document.getElementById('catsw-' + selectId);
+  if (!select || !wrap) return;
+  wrap.querySelectorAll('.cat-switcher-btn, .cat-switcher-menu').forEach(el => el.remove());
+  const curVal = select.value;
+  const curCat = curVal ? getCategoria(parseInt(curVal)) : null;
+  const label = curCat ? curCat.nome : 'Todas as categorias';
+  const iconHtml = curCat
+    ? `<span class="csb-icon" style="background:${curCat.cor}22;color:${curCat.cor};">${curCat.icone||'🏷️'}</span>`
+    : `<span class="csb-icon" style="background:var(--gray-light);color:var(--gray);">🗂️</span>`;
+  const item = (value, nome, icone, cor, active) => `
+    <div class="cat-switcher-item ${active?'active':''}" data-value="${value}">
+      <span class="csb-icon" style="background:${cor}22;color:${cor};">${icone}</span>
+      <span>${nome}</span>
+    </div>`;
+  const items = item('', 'Todas as categorias', '🗂️', '#6b7280', curVal==='') +
+    categorias.map(c => item(c.id, c.nome, c.icone||'🏷️', c.cor, String(curVal)===String(c.id))).join('');
+  wrap.insertAdjacentHTML('beforeend', `
+    <button type="button" class="cat-switcher-btn" onclick="toggleCatSwitcher('${selectId}')">
+      <span class="csb-left">${iconHtml}<span class="csb-label">${label}</span></span>
+      <svg class="cat-switcher-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+    </button>
+    <div class="cat-switcher-menu">${items}</div>`);
+  wrap.querySelectorAll('.cat-switcher-item').forEach(it => {
+    it.addEventListener('click', () => {
+      select.value = it.getAttribute('data-value');
+      wrap.classList.remove('open');
+      select.dispatchEvent(new Event('change'));
+    });
+  });
+}
+
+function toggleCatSwitcher(selectId) {
+  const wrap = document.getElementById('catsw-' + selectId);
+  if (!wrap) return;
+  const wasOpen = wrap.classList.contains('open');
+  document.querySelectorAll('.cat-switcher.open').forEach(w => w.classList.remove('open'));
+  if (!wasOpen) wrap.classList.add('open');
+}
+
+// Fecha qualquer switcher aberto ao clicar fora dele
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.cat-switcher')) {
+    document.querySelectorAll('.cat-switcher.open').forEach(w => w.classList.remove('open'));
+  }
+});
 
 const getCategoria = id => categorias.find(c => c.id == id);
 
-// Selo colorido de categoria, usado nas listas e no kanban
+// Selo colorido de categoria (com ícone), usado nas listas e no kanban
 function categoriaBadge(id) {
   const c = getCategoria(id);
   if (!c) return '<span style="color:var(--gray);font-size:12px;">–</span>';
   return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;
-    padding:3px 9px;border-radius:20px;background:${c.cor}22;color:${c.cor};border:1px solid ${c.cor}55;">
-    <span style="width:7px;height:7px;border-radius:50%;background:${c.cor};"></span>${c.nome}</span>`;
+    padding:3px 9px 3px 6px;border-radius:20px;background:${c.cor}22;color:${c.cor};border:1px solid ${c.cor}55;">
+    <span style="font-size:12px;line-height:1;">${c.icone||'🏷️'}</span>${c.nome}</span>`;
 }
 
 // ============================================================
@@ -2569,6 +2668,7 @@ function openNovaCategoria() {
   editingCategoriaId = null;
   document.getElementById('modal-categoria-title').textContent = 'Nova Categoria';
   document.getElementById('cat-nome').value = '';
+  document.getElementById('cat-icone').value = '';
   document.getElementById('cat-cor').value = '#F47B20';
   document.getElementById('btn-excluir-cat').style.display = 'none';
   openModal('modal-categoria');
@@ -2581,6 +2681,7 @@ function editCategoria(id) {
   editingCategoriaId = id;
   document.getElementById('modal-categoria-title').textContent = 'Editar Categoria';
   document.getElementById('cat-nome').value = c.nome;
+  document.getElementById('cat-icone').value = c.icone || '';
   document.getElementById('cat-cor').value = c.cor || '#F47B20';
   document.getElementById('btn-excluir-cat').style.display = '';
   openModal('modal-categoria');
@@ -2589,8 +2690,9 @@ function editCategoria(id) {
 async function saveCategoria() {
   const nome = document.getElementById('cat-nome').value.trim();
   if (!nome) { alert('Nome da categoria é obrigatório.'); return; }
+  const icone = document.getElementById('cat-icone').value.trim() || '🏷️';
   const cor = document.getElementById('cat-cor').value || '#F47B20';
-  const sbObj = { nome, cor };
+  const sbObj = { nome, icone, cor };
   if (editingCategoriaId) {
     await sbUpdate('categorias', editingCategoriaId, sbObj);
     const idx = categorias.findIndex(c => c.id === editingCategoriaId);
