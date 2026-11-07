@@ -124,6 +124,30 @@ body { font-family: 'Nunito', sans-serif; background: #f8f9fb; color: var(--gray
 }
 .sidebar-overlay.active { display: block; }
 
+
+/* ===== Tela "Pendências" (concluir rápido pelo celular) ===== */
+.pend-filtros { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+.pend-chip { border:1px solid var(--border); background:white; color:var(--gray-dark); font-size:13px; font-weight:600; padding:7px 14px; border-radius:20px; cursor:pointer; font-family:inherit; }
+.pend-chip.active { background:var(--orange); border-color:var(--orange); color:white; }
+.pend-grupo { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.8px; color:var(--gray); margin:16px 2px 8px; }
+.pend-grupo.atrasado { color:#dc2626; }
+.pend-item { display:flex; align-items:center; gap:12px; background:white; border:1px solid var(--border); border-radius:12px; padding:12px 12px 12px 14px; margin-bottom:8px; transition:opacity .25s, transform .25s; }
+.pend-item.saindo { opacity:0; transform:translateX(40px); }
+.pend-info { flex:1; min-width:0; }
+.pend-proj { font-weight:700; font-size:15px; color:var(--gray-dark); line-height:1.3; }
+.pend-cli { font-size:13px; color:var(--gray); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pend-meta { font-size:12px; color:var(--gray); margin-top:5px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+.pend-meta .atraso { color:#dc2626; font-weight:700; }
+.pend-ok { flex-shrink:0; width:52px; height:52px; border-radius:50%; border:2px solid #16a34a; background:white; color:#16a34a; font-size:24px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent; }
+.pend-ok:active, .pend-ok.feito { background:#16a34a; color:white; }
+.pend-vazio { text-align:center; color:var(--gray); padding:40px 10px; font-size:15px; }
+.pend-pref { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--gray); margin:22px 2px 10px; }
+.pend-pref input { width:18px; height:18px; }
+.pend-toast { position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%) translateY(120px); background:#1f2937; color:white; border-radius:12px; padding:12px 14px 12px 16px; display:flex; align-items:center; gap:14px; font-size:14px; z-index:500; transition:transform .25s; width:max-content; max-width:92vw; box-shadow:0 6px 20px rgba(0,0,0,.25); }
+.pend-toast.show { transform:translateX(-50%) translateY(0); }
+.pend-toast span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:60vw; }
+.pend-toast button { background:none; border:none; color:#fdba74; font-weight:800; font-size:14px; cursor:pointer; font-family:inherit; }
+
 /* === MOBILE: telas até 768px === */
 @media screen and (max-width: 768px) {
 
@@ -166,30 +190,28 @@ body { font-family: 'Nunito', sans-serif; background: #f8f9fb; color: var(--gray
   .filters { flex-wrap: wrap; gap: 8px; padding-bottom: 4px; }
   .filters select, .filters input[type="text"] { font-size: 14px; }
 
-  /* Tabelas viram cards */
-  .card-body table { display: block; width: 100%; }
-  .card-body thead { display: none; }
-  .card-body tbody { display: block; }
-  .card-body tbody tr {
-    display: block;
-    background: var(--gray-light);
-    border-radius: 10px;
-    margin-bottom: 10px;
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  /* Tabelas em formato LISTA (igual ao computador), com rolagem lateral */
+  .card-body {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
-  .card-body tbody td {
-    display: flex;
-    align-items: flex-start;
-    padding: 4px 0;
-    font-size: 13px;
-    border: none !important;
-    gap: 8px;
-    min-height: unset;
+  .card-body table { width: max-content; min-width: 100%; }
+  .card-body th { padding: 8px 10px; font-size: 10px; white-space: nowrap; }
+  .card-body td { padding: 8px 10px; font-size: 12px; white-space: nowrap; }
+  /* 1ª coluna (Cliente) fica fixa ao rolar para o lado */
+  .card-body th:first-child,
+  .card-body td:first-child:not([colspan]) {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-shadow: 2px 0 4px rgba(0,0,0,0.06);
   }
-  .card-body tbody td:first-child { font-weight: 700; font-size: 14px; }
-  .action-row { margin-top: 6px; flex-wrap: wrap; gap: 6px; }
+  .card-body td:first-child:not([colspan]) { background: white; font-weight: 700; }
+  .card-body th:first-child { background: var(--gray-light); }
+  .action-row { flex-wrap: nowrap; gap: 6px; }
   .btn-sm { font-size: 12px !important; padding: 5px 10px !important; }
 
   /* Page header */
@@ -725,6 +747,24 @@ tr:hover td { background: #fafafa; }
           </div>
         </div>
       </div>
+
+      <!-- ===== PENDÊNCIAS RÁPIDAS (feita para o celular) ===== -->
+      <div class="screen" id="screen-pendentes">
+        <div class="page-header">
+          <div><div class="page-title">Pendências</div><div class="page-sub">Toque em ✓ para concluir</div></div>
+        </div>
+        <div class="pend-filtros" id="pend-filtros">
+          <button class="pend-chip active" data-f="todas" onclick="setFiltroPend('todas')">Todas</button>
+          <button class="pend-chip" data-f="atrasadas" onclick="setFiltroPend('atrasadas')">Atrasadas</button>
+          <button class="pend-chip" data-f="semana" onclick="setFiltroPend('semana')">Até 7 dias</button>
+        </div>
+        <div id="pend-lista"></div>
+        <label class="pend-pref">
+          <input type="checkbox" id="pend-abrir-auto" onchange="salvarPrefPendentes(this.checked)">
+          Abrir direto nesta tela quando eu usar pelo celular
+        </label>
+      </div>
+      <div class="pend-toast" id="pend-toast"><span id="pend-toast-msg"></span><button onclick="desfazerConclusaoRapida()">Desfazer</button></div>
 
       <!-- ===== TAREFAS (exibido como "Projetos") ===== -->
       <div class="screen" id="screen-tarefas">
@@ -1624,6 +1664,7 @@ const screenTitles = {
   'mensalidades': 'Mensalidades – Em Aberto',
   'enviados': 'Enviados ao Cliente',
   'recebidos': 'Concluído',
+  'pendentes': '✓ Pendências',
   'tarefas': 'Projetos',
   'categorias': 'Categorias',
   'projetos': 'Projetos em Andamento',
@@ -1642,12 +1683,14 @@ function buildSidebar() {
   // tenha acesso a Projetos também enxerga Categorias automaticamente, sem
   // precisar que um admin marque essa permissão manualmente em cada usuário.
   if (perms.includes('tarefas') && !perms.includes('categorias')) perms.push('categorias');
+  // "Pendências" (tela rápida de concluir) acompanha a permissão de Projetos
+  if (perms.includes('tarefas') && !perms.includes('pendentes')) perms.push('pendentes');
   const isAdmin = currentUser.isAdmin;
 
   const sections = {
     'Principal':  ['dashboard-fin','calendario','clientes'],
     'Financeiro': ['mensalidades','enviados','recebidos'],
-    'Projetos':   ['tarefas','categorias','projetos','concluidas','dashboard-tasks'],
+    'Projetos':   ['pendentes','tarefas','categorias','projetos','concluidas','dashboard-tasks'],
   };
   const icons = {
     'dashboard-fin':   `<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>`,
@@ -1657,6 +1700,7 @@ function buildSidebar() {
     'mensalidades':    `<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/>`,
     'enviados':        `<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22,2 15,22 11,13 2,9 22,2"/>`,
     'recebidos':       `<polyline points="20,6 9,17 4,12"/>`,
+    'pendentes':       `<circle cx="12" cy="12" r="10"/><polyline points="8,12 11,15 16,9"/>`,
     'tarefas':         `<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>`,
     'categorias':      `<path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.17L3 3v6.59a2 2 0 0 0 .66 1.41l9.58 9.58a2 2 0 0 0 2.83 0l4.52-4.52a2 2 0 0 0 0-2.83z"/><circle cx="7.5" cy="7.5" r="1.5"/>`,
     'projetos':        `<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>`,
@@ -1668,7 +1712,7 @@ function buildSidebar() {
     'dashboard-fin':'Dashboard Financeiro','calendario':'Calendário','clientes':'Clientes',
     'aniversarios':'Aniversários',
     'mensalidades':'Lançar Mensalidades','enviados':'Enviados ao Cliente','recebidos':'Concluído',
-    'tarefas':'Projetos','categorias':'Categorias','projetos':'Projetos em Andamento','concluidas':'Projetos Concluídos',
+    'pendentes':'✓ Pendências','tarefas':'Projetos','categorias':'Categorias','projetos':'Projetos em Andamento','concluidas':'Projetos Concluídos',
     'dashboard-tasks':'Dashboard de Projetos','usuarios':'Usuários e Permissões',
   };
 
@@ -1729,6 +1773,7 @@ function showScreen(id) {
     'mensalidades': renderMensalidades,
     'enviados': renderEnviados,
     'recebidos': renderRecebidos,
+    'pendentes': renderPendentes,
     'tarefas': renderTarefas,
     'categorias': renderCategorias,
     'projetos': renderProjetos,
@@ -1751,7 +1796,7 @@ function showScreenById(id, navEl) {
   const renders = {
     'dashboard-fin': renderDashFin, 'clientes': renderClientes,
     'mensalidades': renderMensalidades, 'enviados': renderEnviados,
-    'recebidos': renderRecebidos, 'tarefas': renderTarefas,
+    'recebidos': renderRecebidos, 'tarefas': renderTarefas, 'pendentes': renderPendentes,
     'categorias': renderCategorias,
     'projetos': renderProjetos, 'concluidas': renderConcluidas,
     'dashboard-tasks': renderDashTasks, 'usuarios': renderUsuarios,
@@ -4454,6 +4499,7 @@ async function sincronizarDados(silencioso = false) {
       else if (id === 'enviados') renderEnviados();
       else if (id === 'recebidos') renderRecebidos();
       else if (id === 'tarefas') renderTarefas();
+      else if (id === 'pendentes') renderPendentes();
       else if (id === 'categorias') renderCategorias();
       else if (id === 'projetos') renderProjetos();
       else if (id === 'concluidas') renderConcluidas();
@@ -4486,6 +4532,115 @@ async function carregarCategorias() {
     console.warn('Categorias indisponíveis (rode supabase_categorias.sql no Supabase):', e.message||e);
   }
   updateCategoriaSelects();
+}
+
+// ============================================================
+// PENDÊNCIAS — tela rápida para concluir etapas pelo celular
+// ============================================================
+let _filtroPend = 'todas';
+let _ultimaConclusaoRapida = null;
+let _toastPendTimer = null;
+
+function _diasAte(dataStr) {
+  if (!dataStr) return null;
+  const hoje = new Date(); hoje.setHours(12,0,0,0);
+  const d = new Date(dataStr + 'T12:00');
+  return Math.round((d - hoje) / 86400000);
+}
+
+function setFiltroPend(f) {
+  _filtroPend = f;
+  document.querySelectorAll('#pend-filtros .pend-chip').forEach(b => b.classList.toggle('active', b.dataset.f === f));
+  renderPendentes();
+}
+
+function renderPendentes() {
+  const el = document.getElementById('pend-lista');
+  if (!el) return;
+  const chk = document.getElementById('pend-abrir-auto');
+  if (chk) { try { chk.checked = localStorage.getItem('abrirPendentes') === '1'; } catch(e) {} }
+
+  let rows = tarefas.filter(t => t.status !== 'concluido').map(t => ({ t, dias: _diasAte(t.fim) }));
+  if (_filtroPend === 'atrasadas') rows = rows.filter(r => r.dias !== null && r.dias < 0);
+  if (_filtroPend === 'semana')    rows = rows.filter(r => r.dias !== null && r.dias <= 7);
+  // Ordena: com prazo (mais urgente primeiro), depois sem prazo
+  rows.sort((a,b) => (a.dias===null) - (b.dias===null) || (a.dias - b.dias) || a.t.nome.localeCompare(b.t.nome));
+
+  if (!rows.length) {
+    el.innerHTML = `<div class="pend-vazio">🎉 Nada pendente${_filtroPend!=='todas' ? ' neste filtro' : ''}.</div>`;
+    return;
+  }
+  const grupoDe = d => d === null ? 'Sem prazo' : d < 0 ? 'Atrasadas' : d === 0 ? 'Vencem hoje' : d <= 7 ? 'Próximos 7 dias' : 'Mais adiante';
+  let html = '', grupoAtual = null;
+  rows.forEach(({t, dias}) => {
+    const g = grupoDe(dias);
+    if (g !== grupoAtual) { html += `<div class="pend-grupo ${g==='Atrasadas'?'atrasado':''}">${g}</div>`; grupoAtual = g; }
+    const prazo = dias === null ? '' :
+      dias < 0 ? `<span class="atraso">${Math.abs(dias)} dia${Math.abs(dias)>1?'s':''} de atraso</span>` :
+      `Fim ${fmtDate(t.fim)}`;
+    html += `<div class="pend-item" id="pend-${t.id}">
+      <div class="pend-info">
+        <div class="pend-proj">${t.nome}</div>
+        <div class="pend-cli">${getCliNome(t.clienteId)}</div>
+        <div class="pend-meta">${prazo} ${statusBadge(t.status)} ${t.prioridade && t.prioridade!=='normal' ? prioridadeBadge(t.prioridade) : ''}</div>
+      </div>
+      <button class="pend-ok" onclick="concluirRapido(${t.id}, this)" title="Concluir" aria-label="Concluir ${t.nome.replace(/"/g,'')}">✓</button>
+    </div>`;
+  });
+  el.innerHTML = html;
+}
+
+async function concluirRapido(id, btn) {
+  const t = tarefas.find(x => x.id === id);
+  if (!t || t.status === 'concluido') return;
+  _ultimaConclusaoRapida = { id, status: t.status, fim: t.fim };
+  if (btn) { btn.classList.add('feito'); btn.disabled = true; }
+  const item = document.getElementById('pend-' + id);
+  if (item) item.classList.add('saindo');
+  await concluirTarefa(id);
+  setTimeout(renderPendentes, 250);
+  mostrarToastPend(`"${t.nome}" concluída`);
+}
+
+async function desfazerConclusaoRapida() {
+  const u = _ultimaConclusaoRapida;
+  esconderToastPend();
+  if (!u) return;
+  _ultimaConclusaoRapida = null;
+  const t = tarefas.find(x => x.id === u.id);
+  if (!t) return;
+  t.status = u.status;
+  t.fim = u.fim;
+  await sbUpdate('tarefas', u.id, { status: u.status, fim: u.fim || null });
+  salvarDB();
+  renderPendentes(); renderTarefas(); renderConcluidas(); renderProjetos(); renderDashTasks();
+}
+
+function mostrarToastPend(msg) {
+  const el = document.getElementById('pend-toast');
+  if (!el) return;
+  document.getElementById('pend-toast-msg').textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastPendTimer);
+  _toastPendTimer = setTimeout(esconderToastPend, 6000);
+}
+function esconderToastPend() {
+  const el = document.getElementById('pend-toast');
+  if (el) el.classList.remove('show');
+}
+
+function salvarPrefPendentes(ligado) {
+  try { localStorage.setItem('abrirPendentes', ligado ? '1' : '0'); } catch(e) {}
+}
+
+// Abre direto em Pendências se: o link tiver #pendentes, ou a opção estiver
+// marcada e a tela for de celular. Só se o usuário tiver acesso a Projetos.
+function deveAbrirPendentes() {
+  if (!document.getElementById('nav-pendentes')) return false;
+  if (location.hash === '#pendentes') return true;
+  let pref = false;
+  try { pref = localStorage.getItem('abrirPendentes') === '1'; } catch(e) {}
+  return pref && window.matchMedia('(max-width: 768px)').matches;
 }
 
 async function initApp() {
@@ -4526,6 +4681,7 @@ async function initApp() {
   if (dtAno) { const opt = dtAno.querySelector(`option[value="${new Date().getFullYear()}"]`); if(opt) opt.selected=true; }
   iniciarAutoRefresh();
   retornarTimersAtivos();
+  if (deveAbrirPendentes()) showScreen('pendentes');
 }
 </script>
 </body>
