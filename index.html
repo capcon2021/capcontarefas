@@ -131,7 +131,7 @@ body { font-family: 'Nunito', sans-serif; background: #f8f9fb; color: var(--gray
 .pend-chip.active { background:var(--orange); border-color:var(--orange); color:white; }
 .pend-grupo { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.8px; color:var(--gray); margin:16px 2px 8px; }
 .pend-grupo.atrasado { color:#dc2626; }
-.pend-item { display:flex; align-items:center; gap:12px; background:white; border:1px solid var(--border); border-radius:12px; padding:12px 12px 12px 14px; margin-bottom:8px; transition:opacity .25s, transform .25s; }
+.pend-item { display:flex; align-items:center; gap:10px; background:white; border:1px solid var(--border); border-radius:12px; padding:12px 12px 12px 14px; margin-bottom:8px; transition:opacity .25s, transform .25s; }
 .pend-item.saindo { opacity:0; transform:translateX(40px); }
 .pend-info { flex:1; min-width:0; }
 .pend-proj { font-weight:700; font-size:15px; color:var(--gray-dark); line-height:1.3; }
@@ -139,6 +139,10 @@ body { font-family: 'Nunito', sans-serif; background: #f8f9fb; color: var(--gray
 .pend-meta { font-size:12px; color:var(--gray); margin-top:5px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
 .pend-meta .atraso { color:#dc2626; font-weight:700; }
 .pend-ok { flex-shrink:0; width:52px; height:52px; border-radius:50%; border:2px solid #16a34a; background:white; color:#16a34a; font-size:24px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent; }
+.pend-play { flex-shrink:0; width:44px; height:44px; border-radius:50%; border:none; background:#dcfce7; color:#16a34a; font-size:17px; cursor:pointer; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent; }
+.pend-play.rodando { background:#fee2e2; color:#dc2626; }
+.pend-timer { font-family:monospace; font-size:12px; font-weight:700; background:var(--gray-light); padding:2px 7px; border-radius:6px; color:var(--gray-dark); }
+.pend-timer.rodando { background:#fee2e2; color:#dc2626; }
 .pend-ok:active, .pend-ok.feito { background:#16a34a; color:white; }
 .pend-vazio { text-align:center; color:var(--gray); padding:40px 10px; font-size:15px; }
 .pend-pref { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--gray); margin:22px 2px 10px; }
@@ -3250,8 +3254,8 @@ async function toggleTimer(id) {
     t.timerStart = null;
     await sbUpdate('tarefas', id, { tempo_gasto: t.tempoGasto, timer_start: null });
     salvarDB();
-    document.getElementById('btn-timer-'+id).textContent='▶';
-    document.getElementById('btn-timer-'+id).className='btn btn-sm btn-success';
+    const bt = document.getElementById('btn-timer-'+id);
+    if (bt) { bt.textContent='▶'; bt.className='btn btn-sm btn-success'; }
   } else {
     // Iniciar timer - salva horário de início no Supabase
     t.timerRunning = true;
@@ -3259,10 +3263,11 @@ async function toggleTimer(id) {
     if (t.status === 'nao_iniciado') t.status = 'em_andamento';
     await sbUpdate('tarefas', id, { timer_start: t.timerStart, status: t.status });
     salvarDB();
-    document.getElementById('btn-timer-'+id).textContent='⏸';
-    document.getElementById('btn-timer-'+id).className='btn btn-sm btn-danger';
+    const bt = document.getElementById('btn-timer-'+id);
+    if (bt) { bt.textContent='⏸'; bt.className='btn btn-sm btn-danger'; }
     startTimerInterval(id);
   }
+  atualizarItemPendente(id);
 }
 
 function startTimerInterval(id) {
@@ -3273,6 +3278,8 @@ function startTimerInterval(id) {
     t.tempoGasto++;
     const el = document.getElementById('timer-'+id);
     if (el) el.textContent = fmtTempo(t.tempoGasto);
+    const elP = document.getElementById('pend-timer-'+id);
+    if (elP) elP.textContent = fmtTempo(t.tempoGasto);
     if (t.tempoGasto % 60 === 0) { salvarDB(); sbUpdate('tarefas', id, { tempo_gasto: t.tempoGasto }); }
   }, 1000);
 }
@@ -4467,7 +4474,13 @@ async function sincronizarDados(silencioso = false) {
     ]);
     const novosClientes     = (cliRows  || []).map(mapCliente);
     const novasMensalidades = (mensRows || []).map(mapMens);
-    const novasTarefas      = (tarRows  || []).map(mapTarefa).map(t => ({ ...t, timerRunning: false }));
+    // Mantém o timer ligado nas etapas que estão contando neste aparelho
+    // (antes a sincronização a cada 30s desligava o ▶/⏸ da tela).
+    const novasTarefas      = (tarRows  || []).map(mapTarefa).map(t => {
+      if (!timerIntervals[t.id]) return { ...t, timerRunning: false };
+      const local = tarefas.find(x => x.id === t.id);
+      return { ...t, timerRunning: true, timerStart: null, tempoGasto: Math.max(t.tempoGasto, local ? local.tempoGasto : 0) };
+    });
     const novasReunioes     = (reuRows  || []).map(mapReuniao);
     // Proteção: não sobrescreve dados locais se o Supabase retornou tudo vazio
     const totalNovos = novosClientes.length + novasMensalidades.length + novasTarefas.length + novasReunioes.length;
@@ -4582,12 +4595,33 @@ function renderPendentes() {
       <div class="pend-info">
         <div class="pend-proj">${t.nome}</div>
         <div class="pend-cli">${getCliNome(t.clienteId)}</div>
-        <div class="pend-meta">${prazo} ${statusBadge(t.status)} ${t.prioridade && t.prioridade!=='normal' ? prioridadeBadge(t.prioridade) : ''}</div>
+        <div class="pend-meta" id="pend-meta-${t.id}">${_pendMeta(t, prazo)}</div>
       </div>
+      <button class="pend-play ${t.timerRunning?'rodando':''}" id="pend-play-${t.id}" onclick="toggleTimer(${t.id})" title="${t.timerRunning?'Pausar':'Dar andamento'}" aria-label="${t.timerRunning?'Pausar':'Iniciar'} timer">${t.timerRunning?'⏸':'▶'}</button>
       <button class="pend-ok" onclick="concluirRapido(${t.id}, this)" title="Concluir" aria-label="Concluir ${t.nome.replace(/"/g,'')}">✓</button>
     </div>`;
   });
   el.innerHTML = html;
+}
+
+function _pendMeta(t, prazo) {
+  const timer = (t.timerRunning || t.tempoGasto)
+    ? `<span class="pend-timer ${t.timerRunning?'rodando':''}" id="pend-timer-${t.id}">${fmtTempo(t.tempoGasto||0)}</span>` : '';
+  return `${prazo} ${statusBadge(t.status)} ${t.prioridade && t.prioridade!=='normal' ? prioridadeBadge(t.prioridade) : ''} ${timer}`;
+}
+
+// Atualiza só o item da tela Pendências (sem redesenhar a lista toda)
+function atualizarItemPendente(id) {
+  const t = tarefas.find(x => x.id === id);
+  const btn = document.getElementById('pend-play-' + id);
+  const meta = document.getElementById('pend-meta-' + id);
+  if (!t || !btn || !meta) return;
+  btn.textContent = t.timerRunning ? '⏸' : '▶';
+  btn.classList.toggle('rodando', !!t.timerRunning);
+  btn.title = t.timerRunning ? 'Pausar' : 'Dar andamento';
+  const d = _diasAte(t.fim);
+  const prazo = d === null ? '' : d < 0 ? `<span class="atraso">${Math.abs(d)} dia${Math.abs(d)>1?'s':''} de atraso</span>` : `Fim ${fmtDate(t.fim)}`;
+  meta.innerHTML = _pendMeta(t, prazo);
 }
 
 async function concluirRapido(id, btn) {
