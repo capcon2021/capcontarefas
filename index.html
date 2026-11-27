@@ -581,41 +581,68 @@ html[data-theme="dark"] .chip-dia input:checked + span{background:var(--laranja)
 .mf-grade .campo{margin-bottom:12px;}
 @media(max-width:560px){.mf-grade{grid-template-columns:1fr;}}
 
-/* ============ 5W2H ============ */
-.w2h-pergunta{font-size:23px;font-weight:800;font-stretch:120%;letter-spacing:-.015em;color:var(--carvao-900);line-height:1.02;}
-.w2h-en{font-size:12px;font-weight:500;color:var(--texto-fraco);margin-top:3px;}
-.w2h-dica{font-size:12.5px;color:var(--texto-suave);margin-top:8px;line-height:1.4;max-width:18ch;}
-.w2h-secao{display:grid;grid-template-columns:156px minmax(0,1fr);gap:22px;padding:18px 0;border-bottom:1px solid var(--linha);}
-.w2h-secao:last-child{border-bottom:none;}
-.w2h-secao .campo:last-child{margin-bottom:0;}
-.w2h-q{position:relative;}
-.w2h-q .w2h-ok{display:none;position:absolute;top:2px;right:0;width:20px;height:20px;border-radius:50%;background:var(--laranja);color:#fff;align-items:center;justify-content:center;}
-.w2h-q .w2h-ok .ic{width:13px;height:13px;}
-.w2h-secao.ok .w2h-ok{display:flex;}
-.w2h-secao:not(.ok) .w2h-pergunta{color:var(--texto-suave);}
-@media(max-width:640px){
-  .w2h-secao{grid-template-columns:1fr;gap:10px;}
-  .w2h-dica{max-width:none;}
-  .w2h-secao.ok .w2h-ok{display:none;}
+/* ============ 5W2H (simples: uma linha por pergunta) ============ */
+.mf-grade-4{grid-template-columns:repeat(4,minmax(0,1fr));}
+@media(max-width:760px){.mf-grade-4{grid-template-columns:repeat(2,minmax(0,1fr));}}
+.mf-topo{padding:16px 0 4px;}
+.w2h-simples{border:1px solid var(--linha);border-radius:12px;overflow:hidden;margin:6px 0 14px;background:var(--card);}
+.w2h-linha{display:grid;grid-template-columns:150px minmax(0,1fr);border-bottom:1px solid var(--linha);}
+.w2h-linha:last-child{border-bottom:none;}
+.w2h-rot{padding:12px 14px;background:var(--card-2);border-right:1px solid var(--linha);display:flex;flex-direction:column;justify-content:center;gap:1px;cursor:text;}
+.w2h-q{font-size:16px;font-weight:800;font-stretch:118%;letter-spacing:-.01em;color:var(--texto-suave);line-height:1.1;display:flex;align-items:center;gap:7px;}
+.w2h-linha.ok .w2h-q{color:var(--carvao-900);}
+.w2h-linha.ok .w2h-q::after{content:"";width:7px;height:7px;border-radius:50%;background:var(--laranja);flex:none;}
+.w2h-d{font-size:12px;color:var(--texto-fraco);line-height:1.3;}
+.w2h-campo{padding:6px 8px;display:flex;align-items:center;min-width:0;}
+.w2h-campo > input,.w2h-campo > textarea,.w2h-moeda input,.w2h-datas input{
+  width:100%;border:1px solid transparent;background:transparent;border-radius:7px;padding:9px 10px;font-size:14px;
+  color:var(--texto);font-family:inherit;line-height:1.45;resize:none;transition:background .12s,border-color .12s,box-shadow .12s;
 }
+.w2h-campo > input::placeholder,.w2h-campo > textarea::placeholder,.w2h-moeda input::placeholder{color:var(--texto-fraco);}
+.w2h-campo > input:hover,.w2h-campo > textarea:hover,.w2h-moeda input:hover,.w2h-datas input:hover{background:var(--hover);}
+.w2h-campo > input:focus,.w2h-campo > textarea:focus,.w2h-moeda input:focus,.w2h-datas input:focus{
+  outline:none;border-color:var(--laranja);background:var(--input-bg);box-shadow:0 0 0 3px rgba(254,110,11,0.14);
+}
+.w2h-campo > textarea{min-height:40px;overflow:hidden;}
+.w2h-datas{display:flex;gap:6px 14px;flex-wrap:wrap;align-items:center;width:100%;}
+.w2h-datas label{display:flex;align-items:center;gap:4px;font-size:12.5px;font-weight:600;color:var(--texto-fraco);}
+.w2h-datas input{width:auto;}
+.w2h-moeda{display:flex;align-items:center;width:100%;max-width:260px;}
+.w2h-moeda span{font-size:14px;font-weight:600;color:var(--texto-fraco);padding-left:10px;}
+.w2h-moeda input{padding-left:6px;font-variant-numeric:tabular-nums;}
+@media(max-width:600px){
+  .w2h-linha{grid-template-columns:1fr;}
+  .w2h-rot{border-right:none;border-bottom:1px solid var(--linha);flex-direction:row;justify-content:flex-start;align-items:baseline;gap:8px;padding:9px 12px;}
+}
+.mf-detalhes{border:1px solid var(--linha);border-radius:12px;margin-bottom:14px;}
+.mf-detalhes summary{padding:12px 14px;cursor:pointer;font-weight:600;font-size:13.5px;list-style:none;display:flex;align-items:center;gap:10px;}
+.mf-detalhes summary::-webkit-details-marker{display:none;}
+.mf-detalhes summary::before{content:"";width:7px;height:7px;border-right:2px solid var(--texto-suave);border-bottom:2px solid var(--texto-suave);transform:rotate(-45deg);transition:transform .15s;}
+.mf-detalhes[open] summary::before{transform:rotate(45deg);}
+.mf-detalhes summary span{font-weight:400;color:var(--texto-fraco);}
+.mf-detalhes .mf-grade{padding:2px 14px 4px;}
+.mf-detalhes .campo textarea{min-height:60px;}
 
-/* Ficha 5W2H (detalhes) */
-.w2h-matriz{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border:1px solid var(--linha);border-radius:12px;overflow:hidden;margin:4px 0 18px;background:var(--card);}
-.w2h-celula{padding:16px 18px 18px;box-shadow:1px 0 0 var(--linha),0 1px 0 var(--linha);min-width:0;}
-.w2h-celula.larga{grid-column:1/-1;}
-.w2h-celula-cab{display:flex;align-items:baseline;gap:10px;}
-.w2h-celula .w2h-pergunta{font-size:19px;}
-.w2h-celula .w2h-en{margin:0;}
-.w2h-resposta{margin-top:10px;font-size:14px;line-height:1.55;color:var(--texto);white-space:pre-wrap;word-break:break-word;}
-.w2h-resposta .rot{display:block;font-size:12px;font-weight:600;color:var(--texto-fraco);margin-top:10px;margin-bottom:2px;white-space:normal;}
-.w2h-resposta .rot:first-child{margin-top:0;}
-.w2h-resposta ol{margin:2px 0 0 20px;white-space:normal;}
-.w2h-resposta ol li{padding-left:4px;margin-bottom:3px;}
-.w2h-resposta .valor-moeda{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em;}
-.w2h-celula.vazia .w2h-pergunta{color:var(--texto-fraco);}
-.w2h-celula.vazia .w2h-resposta{color:var(--texto-fraco);font-style:italic;}
-@media(max-width:640px){.w2h-matriz{grid-template-columns:1fr;}}
+/* Ficha 5W2H (detalhes): lista pergunta / resposta */
+.w2h-lista{border:1px solid var(--linha);border-radius:12px;overflow:hidden;margin:4px 0 18px;}
+.w2h-item{display:grid;grid-template-columns:136px minmax(0,1fr);border-bottom:1px solid var(--linha);}
+.w2h-item:last-child{border-bottom:none;}
+.w2h-item-q{padding:12px 14px;background:var(--card-2);border-right:1px solid var(--linha);font-size:15px;font-weight:800;font-stretch:118%;letter-spacing:-.01em;color:var(--carvao-900);line-height:1.15;}
+.w2h-item-q small{display:block;font-size:11.5px;font-weight:500;font-stretch:100%;letter-spacing:0;color:var(--texto-fraco);margin-top:2px;}
+.w2h-item-r{padding:12px 16px;font-size:14px;line-height:1.55;color:var(--texto);word-break:break-word;}
+.w2h-item-r ol{margin:0 0 0 18px;}
+.w2h-item-r ol li{padding-left:3px;}
+.w2h-item-r .extra{display:block;font-size:12.5px;color:var(--texto-suave);margin-top:4px;white-space:pre-wrap;}
+.w2h-item-r .extra b{font-weight:600;color:var(--texto-fraco);}
+.w2h-item-r .valor-moeda{font-weight:700;font-variant-numeric:tabular-nums;}
+.w2h-item.vazia .w2h-item-q{color:var(--texto-fraco);}
+.w2h-item.vazia .w2h-item-r{color:var(--texto-fraco);font-style:italic;}
+@media(max-width:600px){.w2h-item{grid-template-columns:100px minmax(0,1fr);}.w2h-item-q{font-size:14px;padding:11px 10px;}}
 .secao-titulo{font-size:14px;font-weight:700;font-stretch:106%;color:var(--carvao-900);margin:6px 0 10px;}
+.pedido-cliente{border:1px solid var(--linha);border-radius:12px;padding:14px 16px;margin-bottom:18px;background:var(--card-2);}
+.pedido-cliente .rotulo{font-size:12.5px;font-weight:600;color:var(--texto-fraco);margin-bottom:4px;}
+.pedido-cliente .rotulo + .rotulo,.pedido-cliente * + .rotulo{margin-top:12px;}
+.pedido-cliente .texto{font-size:14px;line-height:1.55;white-space:pre-wrap;word-break:break-word;}
 
 /* Página Plano 5W2H */
 .tabela-plano th{vertical-align:bottom;padding-top:12px;}
@@ -803,8 +830,91 @@ html[data-theme="dark"] .chip-dia input:checked + span{background:var(--laranja)
 .tag-rec{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--laranja-dark);background:var(--laranja-soft);padding:1px 7px;border-radius:5px;margin-left:6px;vertical-align:1px;white-space:nowrap;}
 .tag-rec .ic{width:11px;height:11px;}
 
+/* ============ SOLICITAÇÃO DO CLIENTE ============ */
+.modal.modal-sol{max-width:1000px;}
+.sol-grade{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(290px,1fr);}
+.sol-principal{padding:20px 24px 6px;min-width:0;}
+.sol-lateral{padding:20px 22px 8px;background:var(--card-2);border-left:1px solid var(--linha);min-width:0;}
+@media(max-width:820px){.sol-grade{grid-template-columns:1fr;}.sol-lateral{border-left:none;border-top:1px solid var(--linha);}}
+@media(max-width:560px){.sol-principal,.sol-lateral{padding:16px 16px 4px;}}
+.contador-chars{float:right;font-weight:400;color:var(--texto-fraco);font-size:12px;font-variant-numeric:tabular-nums;}
+.campo-titulo-grande input{font-size:17px;font-weight:600;padding:12px 14px;}
+.sol-ideia textarea{min-height:168px;}
+.topicos-lista{list-style:none;display:flex;flex-direction:column;gap:6px;margin-bottom:8px;counter-reset:topico;}
+.topico-item{display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--linha);border-radius:9px;padding:3px 3px 3px 9px;}
+.topico-item:focus-within{border-color:var(--laranja);box-shadow:0 0 0 3px rgba(254,110,11,0.12);}
+.topico-item::before{
+  counter-increment:topico;content:counter(topico);min-width:22px;height:22px;border-radius:6px;background:var(--laranja-soft);
+  color:var(--laranja-dark);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;font-variant-numeric:tabular-nums;
+}
+html[data-theme="dark"] .topico-item::before{color:var(--laranja-light);}
+.topico-item input{flex:1;min-width:0;border:none;background:transparent;font-size:14px;padding:7px 4px;color:var(--texto);font-family:inherit;}
+.topico-item input:focus{outline:none;}
+.topico-item .btn-icone{width:30px;height:30px;}
+.topico-novo{display:flex;gap:8px;}
+.topico-novo input{
+  flex:1;min-width:0;padding:10px 12px;border:1px solid var(--linha-forte);border-radius:8px;font-size:14px;
+  color:var(--texto);background-color:var(--input-bg);font-family:inherit;
+}
+.topico-novo input:focus{outline:none;border-color:var(--laranja);box-shadow:0 0 0 3px rgba(254,110,11,0.16);}
+.sol-secao{margin-bottom:20px;}
+.sol-secao-tit{font-size:13px;font-weight:600;color:var(--texto);margin-bottom:8px;display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+.sol-secao-tit .txt-fraco{font-weight:400;font-size:12px;font-variant-numeric:tabular-nums;}
+.dropzone{
+  display:flex;flex-direction:column;align-items:center;gap:2px;border:1.5px dashed var(--linha-forte);border-radius:12px;
+  padding:20px 14px;text-align:center;cursor:pointer;background:var(--card);color:var(--texto-suave);font-size:13px;line-height:1.45;
+  transition:border-color .15s,background .15s;
+}
+.dropzone:hover,.dropzone.arrastando,.dropzone:focus-visible{border-color:var(--laranja);background:var(--laranja-soft);outline:none;}
+.dropzone .ic{width:26px;height:26px;color:var(--laranja);margin-bottom:6px;}
+.dropzone strong{color:var(--texto);font-size:14px;}
+.dropzone.cheio{opacity:.55;pointer-events:none;}
+.fotos-grade{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px;}
+.fotos-grade:empty{display:none;}
+.foto-thumb{position:relative;aspect-ratio:1;border-radius:9px;overflow:hidden;background:var(--bg-alt);border:1px solid var(--linha);}
+.foto-thumb img{width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in;}
+.foto-thumb button{
+  position:absolute;top:5px;right:5px;width:24px;height:24px;border-radius:50%;border:none;background:rgba(15,18,24,0.72);
+  color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;
+}
+.foto-thumb button .ic{width:13px;height:13px;}
+.segmentado{display:grid;grid-template-columns:repeat(3,1fr);background:var(--bg-alt);padding:3px;border-radius:9px;gap:2px;}
+.segmentado label{position:relative;margin:0;}
+.segmentado input{position:absolute;opacity:0;width:0;height:0;}
+.segmentado span{display:block;text-align:center;padding:8px 6px;border-radius:7px;font-size:13px;font-weight:600;color:var(--texto-suave);cursor:pointer;}
+.segmentado input:checked + span{background:var(--card);color:var(--carvao-900);box-shadow:0 1px 2px rgba(21,25,34,0.12);}
+.segmentado input[value="alta"]:checked + span{color:var(--vermelho);}
+.segmentado input[value="media"]:checked + span{color:var(--amarelo);}
+.segmentado input:focus-visible + span{outline:2px solid var(--laranja);outline-offset:1px;}
+.sol-lateral .campo input{background-color:var(--input-bg);}
+.passos{list-style:none;counter-reset:passo;display:flex;flex-direction:column;gap:10px;}
+.passos li{display:flex;gap:10px;font-size:13px;color:var(--texto-suave);line-height:1.4;}
+.passos li::before{
+  counter-increment:passo;content:counter(passo);width:22px;height:22px;flex:none;border-radius:50%;border:1.5px solid var(--linha-forte);
+  display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;color:var(--texto);background:var(--card);
+}
+.anexos-linha{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+.anexos-linha img{width:76px;height:76px;object-fit:cover;border-radius:8px;border:1px solid var(--linha);cursor:zoom-in;background:var(--bg-alt);}
+.topicos-mostra{margin:6px 0 0 20px;font-size:13.5px;color:var(--texto);line-height:1.55;}
+.topicos-mostra li{padding-left:2px;}
+.sol-txt .rot-min{font-weight:600;color:var(--texto);}
+
+/* Visualizador de fotos */
+#modal-imagem{z-index:330;background:rgba(8,10,14,0.9);-webkit-backdrop-filter:none;backdrop-filter:none;}
+#modal-imagem img{max-width:min(92vw,1400px);max-height:82vh;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.5);background:#fff;}
+.visor-btn{
+  position:absolute;width:44px;height:44px;border-radius:50%;border:none;background:rgba(255,255,255,0.14);color:#fff;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+.visor-btn:hover{background:rgba(255,255,255,0.26);}
+.visor-btn .ic{width:22px;height:22px;}
+.visor-fechar{top:18px;right:18px;}
+.visor-ant{left:18px;top:50%;transform:translateY(-50%);}
+.visor-prox{right:18px;top:50%;transform:translateY(-50%);}
+.visor-legenda{position:absolute;bottom:20px;left:0;right:0;text-align:center;color:rgba(255,255,255,0.78);font-size:13px;font-variant-numeric:tabular-nums;}
+
 /* Avisos (toasts) */
-#toasts{position:fixed;right:20px;top:calc(var(--topbar-h) + 12px);z-index:400;display:flex;flex-direction:column;gap:8px;width:min(420px,calc(100vw - 40px));pointer-events:none;}
+#toasts{position:fixed;left:20px;bottom:20px;z-index:400;display:flex;flex-direction:column;gap:8px;width:min(420px,calc(100vw - 40px));pointer-events:none;}
 .toast{
   pointer-events:auto;display:flex;gap:10px;align-items:flex-start;background:var(--grafite);color:#fff;border-radius:10px;
   padding:12px 10px 12px 14px;box-shadow:var(--shadow-lg);font-size:13.5px;line-height:1.45;
@@ -820,9 +930,9 @@ html[data-theme="dark"] .toast{background:#2a303d;}
 .toast button{background:none;border:none;color:rgba(255,255,255,.55);cursor:pointer;padding:2px;border-radius:5px;display:flex;}
 .toast button:hover{color:#fff;}
 .toast button .ic{width:16px;height:16px;}
-.toast.saindo{opacity:0;transform:translateY(-6px);}
-@keyframes toastin{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:none;}}
-@media(max-width:640px){#toasts{right:14px;width:calc(100vw - 28px);}}
+.toast.saindo{opacity:0;transform:translateY(6px);}
+@keyframes toastin{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+@media(max-width:640px){#toasts{left:14px;right:14px;bottom:auto;top:calc(var(--topbar-h) + 10px);width:auto;}}
 </style>
 </head>
 <body>
@@ -1265,108 +1375,92 @@ html[data-theme="dark"] .toast{background:#2a303d;}
   </section>
 </template>
 
-<!-- MODAL: Novo/Editar Projeto (5W2H) -->
+<!-- MODAL: Novo/Editar Projeto (5W2H simples) -->
 <div class="modal-overlay" id="modal-tarefa">
   <div class="modal modal-md modal-form" role="dialog" aria-modal="true" aria-labelledby="modal-tarefa-titulo">
     <div class="mf-cab">
       <div>
         <h3 id="modal-tarefa-titulo">Novo projeto</h3>
-        <p>Responda às sete perguntas do 5W2H. Só o título é obrigatório; o resto pode ser completado depois.</p>
+        <p>Uma resposta curta para cada pergunta. Só o título é obrigatório.</p>
       </div>
       <span class="w2h-medidor" id="tarefa-medidor"></span>
     </div>
     <div class="mf-corpo">
       <input type="hidden" id="tarefa-id">
-      <div class="mf-bloco">
+      <div class="mf-grade mf-grade-4 mf-topo">
+        <div class="campo" id="campo-tarefa-cliente">
+          <label for="tarefa-cliente">Cliente</label>
+          <select id="tarefa-cliente"></select>
+        </div>
+        <div class="campo" id="campo-tarefa-categoria">
+          <label for="tarefa-categoria">Categoria</label>
+          <select id="tarefa-categoria"><option value="">Sem categoria</option></select>
+        </div>
+        <div class="campo">
+          <label for="tarefa-prioridade">Prioridade</label>
+          <select id="tarefa-prioridade">
+            <option value="baixa">Baixa</option>
+            <option value="media" selected>Média</option>
+            <option value="alta">Alta</option>
+          </select>
+        </div>
+        <div class="campo" id="campo-tarefa-status">
+          <label for="tarefa-status">Situação</label>
+          <select id="tarefa-status">
+            <option value="aberta">Aberta</option>
+            <option value="em_andamento">Em andamento</option>
+            <option value="concluida">Concluída</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="w2h-simples">
+        <div class="w2h-linha" data-w2h="oque">
+          <label class="w2h-rot" for="tarefa-titulo"><span class="w2h-q">O quê?</span><span class="w2h-d">O que será feito</span></label>
+          <div class="w2h-campo"><input type="text" id="tarefa-titulo" maxlength="160" placeholder="Ex.: Implantar fluxo de caixa semanal"></div>
+        </div>
+        <div class="w2h-linha" data-w2h="porque">
+          <label class="w2h-rot" for="tarefa-objetivo"><span class="w2h-q">Por quê?</span><span class="w2h-d">O motivo</span></label>
+          <div class="w2h-campo"><textarea id="tarefa-objetivo" rows="1" class="auto" placeholder="Ex.: Evitar falta de caixa para pagar fornecedores"></textarea></div>
+        </div>
+        <div class="w2h-linha" data-w2h="onde">
+          <label class="w2h-rot" for="tarefa-onde"><span class="w2h-q">Onde?</span><span class="w2h-d">Setor ou local</span></label>
+          <div class="w2h-campo"><input type="text" id="tarefa-onde" list="lista-onde" placeholder="Ex.: Financeiro, ou Empresa toda"></div>
+        </div>
+        <div class="w2h-linha" data-w2h="quando">
+          <label class="w2h-rot" for="tarefa-data"><span class="w2h-q">Quando?</span><span class="w2h-d">Prazo</span></label>
+          <div class="w2h-campo"><div class="w2h-datas">
+            <label>Início <input type="date" id="tarefa-data-inicio" aria-label="Início"></label>
+            <label>Prazo <input type="date" id="tarefa-data" aria-label="Prazo"></label>
+          </div></div>
+        </div>
+        <div class="w2h-linha" data-w2h="quem">
+          <label class="w2h-rot" for="tarefa-colaborador"><span class="w2h-q">Quem?</span><span class="w2h-d">Responsável</span></label>
+          <div class="w2h-campo"><input type="text" id="tarefa-colaborador" placeholder="Nome de quem responde pela entrega"></div>
+        </div>
+        <div class="w2h-linha" data-w2h="como">
+          <label class="w2h-rot" for="tarefa-como"><span class="w2h-q">Como?</span><span class="w2h-d">Etapas, uma por linha</span></label>
+          <div class="w2h-campo"><textarea id="tarefa-como" rows="2" class="auto" placeholder="Ex.: Levantar contas a pagar&#10;Montar planilha de projeção"></textarea></div>
+        </div>
+        <div class="w2h-linha" data-w2h="quanto">
+          <label class="w2h-rot" for="tarefa-custo"><span class="w2h-q">Quanto?</span><span class="w2h-d">Custo previsto</span></label>
+          <div class="w2h-campo"><div class="w2h-moeda"><span>R$</span><input type="text" id="tarefa-custo" inputmode="decimal" placeholder="0,00"></div></div>
+        </div>
+      </div>
+      <datalist id="lista-onde">
+        <option value="Empresa toda"></option><option value="Financeiro"></option><option value="Comercial"></option>
+        <option value="Administrativo"></option><option value="Produção"></option><option value="RH"></option><option value="Marketing"></option>
+      </datalist>
+
+      <details class="mf-detalhes" id="tarefa-detalhes">
+        <summary>Mais detalhes <span>(opcional: escopo, indicador, envolvidos, recursos)</span></summary>
         <div class="mf-grade">
-          <div class="campo" id="campo-tarefa-cliente">
-            <label for="tarefa-cliente">Cliente</label>
-            <select id="tarefa-cliente"></select>
-          </div>
-          <div class="campo" id="campo-tarefa-categoria">
-            <label for="tarefa-categoria">Categoria</label>
-            <select id="tarefa-categoria"><option value="">Sem categoria</option></select>
-          </div>
-          <div class="campo">
-            <label for="tarefa-prioridade">Prioridade</label>
-            <select id="tarefa-prioridade">
-              <option value="baixa">Baixa</option>
-              <option value="media" selected>Média</option>
-              <option value="alta">Alta</option>
-            </select>
-          </div>
-          <div class="campo" id="campo-tarefa-status">
-            <label for="tarefa-status">Situação</label>
-            <select id="tarefa-status">
-              <option value="aberta">Aberta</option>
-              <option value="em_andamento">Em andamento</option>
-              <option value="concluida">Concluída</option>
-            </select>
-          </div>
+          <div class="campo"><label for="tarefa-descricao">Escopo</label><textarea id="tarefa-descricao" rows="2" placeholder="O que entra e o que não entra"></textarea></div>
+          <div class="campo"><label for="tarefa-indicador">Indicador de resultado</label><textarea id="tarefa-indicador" rows="2" placeholder="Como o resultado será medido"></textarea></div>
+          <div class="campo"><label for="tarefa-envolvidos">Envolvidos</label><input type="text" id="tarefa-envolvidos" placeholder="Outras pessoas ou setores"></div>
+          <div class="campo"><label for="tarefa-custo-detalhe">Recursos</label><input type="text" id="tarefa-custo-detalhe" placeholder="Ex.: licença de software"></div>
         </div>
-      </div>
-
-      <div class="w2h-secao" data-w2h="oque">
-        <div class="w2h-q"><div class="w2h-pergunta">O quê?</div><div class="w2h-en">What</div><div class="w2h-dica">A ação ou entrega que será feita</div><span class="w2h-ok"><i data-ic="check"></i></span></div>
-        <div>
-          <div class="campo"><label for="tarefa-titulo">Título do projeto</label><input type="text" id="tarefa-titulo" placeholder="Ex.: Implantar fluxo de caixa semanal"></div>
-          <div class="campo"><label for="tarefa-descricao">Escopo <span class="opc">(opcional)</span></label><textarea id="tarefa-descricao" rows="2" placeholder="O que entra e o que não entra nesta entrega"></textarea></div>
-        </div>
-      </div>
-
-      <div class="w2h-secao" data-w2h="porque">
-        <div class="w2h-q"><div class="w2h-pergunta">Por quê?</div><div class="w2h-en">Why</div><div class="w2h-dica">A justificativa e como medir o resultado</div><span class="w2h-ok"><i data-ic="check"></i></span></div>
-        <div>
-          <div class="campo"><label for="tarefa-objetivo">Objetivo</label><textarea id="tarefa-objetivo" rows="2" placeholder="Que problema resolve ou que ganho traz para a empresa?"></textarea></div>
-          <div class="campo"><label for="tarefa-indicador">Indicador de resultado <span class="opc">(opcional)</span></label><textarea id="tarefa-indicador" rows="2" placeholder="Como o resultado será medido e em qual relatório aparece"></textarea></div>
-        </div>
-      </div>
-
-      <div class="w2h-secao" data-w2h="onde">
-        <div class="w2h-q"><div class="w2h-pergunta">Onde?</div><div class="w2h-en">Where</div><div class="w2h-dica">Em que parte da empresa acontece</div><span class="w2h-ok"><i data-ic="check"></i></span></div>
-        <div>
-          <div class="campo"><label for="tarefa-abrangencia">Abrangência</label>
-            <select id="tarefa-abrangencia">
-              <option value="">Não definida</option>
-              <option value="setor">Um setor</option>
-              <option value="empresa_toda">Empresa toda</option>
-            </select>
-          </div>
-          <div class="campo" id="campo-tarefa-setor" style="display:none"><label for="tarefa-setor">Qual setor</label><input type="text" id="tarefa-setor" placeholder="Ex.: Financeiro, RH, Comercial"></div>
-        </div>
-      </div>
-
-      <div class="w2h-secao" data-w2h="quando">
-        <div class="w2h-q"><div class="w2h-pergunta">Quando?</div><div class="w2h-en">When</div><div class="w2h-dica">Início da implantação e prazo final</div><span class="w2h-ok"><i data-ic="check"></i></span></div>
-        <div class="campo-linha">
-          <div class="campo"><label for="tarefa-data-inicio">Início</label><input type="date" id="tarefa-data-inicio"></div>
-          <div class="campo"><label for="tarefa-data">Prazo para conclusão</label><input type="date" id="tarefa-data"></div>
-        </div>
-      </div>
-
-      <div class="w2h-secao" data-w2h="quem">
-        <div class="w2h-q"><div class="w2h-pergunta">Quem?</div><div class="w2h-en">Who</div><div class="w2h-dica">Quem responde pela entrega e quem participa</div><span class="w2h-ok"><i data-ic="check"></i></span></div>
-        <div>
-          <div class="campo" id="campo-tarefa-colaborador"><label for="tarefa-colaborador">Responsável</label><input type="text" id="tarefa-colaborador" placeholder="Nome de quem responde pelo projeto"></div>
-          <div class="campo"><label for="tarefa-envolvidos">Envolvidos <span class="opc">(opcional)</span></label><input type="text" id="tarefa-envolvidos" placeholder="Outras pessoas ou setores que participam"></div>
-        </div>
-      </div>
-
-      <div class="w2h-secao" data-w2h="como">
-        <div class="w2h-q"><div class="w2h-pergunta">Como?</div><div class="w2h-en">How</div><div class="w2h-dica">O método e as etapas de execução</div><span class="w2h-ok"><i data-ic="check"></i></span></div>
-        <div>
-          <div class="campo"><label for="tarefa-como">Etapas</label><textarea id="tarefa-como" rows="4" placeholder="Uma etapa por linha. Ex.:&#10;Levantar contas a pagar e a receber&#10;Montar planilha de projeção&#10;Treinar o responsável do financeiro"></textarea>
-          <div class="campo-ajuda">Cada linha vira uma etapa numerada na ficha do projeto.</div></div>
-        </div>
-      </div>
-
-      <div class="w2h-secao" data-w2h="quanto">
-        <div class="w2h-q"><div class="w2h-pergunta">Quanto?</div><div class="w2h-en">How much</div><div class="w2h-dica">Investimento e recursos necessários</div><span class="w2h-ok"><i data-ic="check"></i></span></div>
-        <div>
-          <div class="campo"><label for="tarefa-custo">Custo previsto (R$)</label><input type="text" id="tarefa-custo" inputmode="decimal" placeholder="Ex.: 2.500,00 (use 0 se não houver custo)"></div>
-          <div class="campo"><label for="tarefa-custo-detalhe">Recursos <span class="opc">(opcional)</span></label><input type="text" id="tarefa-custo-detalhe" placeholder="Ex.: licença de software, horas de consultoria"></div>
-        </div>
-      </div>
+      </details>
     </div>
     <div class="mf-rodape">
       <span class="mf-nota" id="tarefa-nota"></span>
@@ -1455,28 +1549,86 @@ html[data-theme="dark"] .toast{background:#2a303d;}
 
 <!-- MODAL: Nova solicitação (cliente pede projeto) -->
 <div class="modal-overlay" id="modal-solicitacao">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-solicitacao-titulo">
-    <h3 id="modal-solicitacao-titulo">Solicitar novo projeto</h3>
-    <p class="modal-intro">A CAP Consultoria analisa o pedido e completa o plano 5W2H com você.</p>
-    <div class="campo"><label for="solicitacao-titulo">O que você precisa?</label><input type="text" id="solicitacao-titulo" placeholder="Ex.: Organizar o contas a pagar"></div>
-    <div class="campo"><label for="solicitacao-objetivo">Por que isso é importante? <span class="opc">(opcional)</span></label><textarea id="solicitacao-objetivo" rows="2" placeholder="O problema que está acontecendo ou o resultado que você espera"></textarea></div>
-    <div class="campo"><label for="solicitacao-descricao">Detalhes <span class="opc">(opcional)</span></label><input type="text" id="solicitacao-descricao" placeholder="Qualquer informação que ajude a CAP"></div>
-    <div class="campo-linha">
-      <div class="campo">
-        <label for="solicitacao-prioridade">Prioridade sugerida</label>
-        <select id="solicitacao-prioridade">
-          <option value="baixa">Baixa</option>
-          <option value="media" selected>Média</option>
-          <option value="alta">Alta</option>
-        </select>
+  <div class="modal modal-sol modal-form" role="dialog" aria-modal="true" aria-labelledby="modal-solicitacao-titulo">
+    <div class="mf-cab">
+      <div>
+        <h3 id="modal-solicitacao-titulo">Solicitar novo projeto</h3>
+        <p>Conte sua ideia com o máximo de detalhes. A CAP Consultoria analisa e monta o plano de ação com você.</p>
       </div>
-      <div class="campo"><label for="solicitacao-data">Prazo desejado</label><input type="date" id="solicitacao-data"></div>
+      <button class="btn-fechar-x" id="btn-fechar-solicitacao" title="Fechar" aria-label="Fechar"><i data-ic="x"></i></button>
     </div>
-    <div class="modal-acoes">
+    <div class="sol-grade">
+      <div class="sol-principal">
+        <div class="campo campo-titulo-grande">
+          <label for="solicitacao-titulo">O que você precisa? <span class="contador-chars" id="sol-cont-titulo">0/120</span></label>
+          <input type="text" id="solicitacao-titulo" maxlength="120" placeholder="Ex.: Organizar o contas a pagar da loja">
+        </div>
+        <div class="campo sol-ideia">
+          <label for="solicitacao-descricao">Descreva a ideia <span class="contador-chars" id="sol-cont-desc">0/3000</span></label>
+          <textarea id="solicitacao-descricao" maxlength="3000" rows="7" placeholder="Como é hoje, o que está atrapalhando e o que você imagina como solução. Quanto mais contexto, melhor."></textarea>
+        </div>
+        <div class="campo">
+          <label for="sol-topico-novo">Tópicos <span class="opc">(os pontos principais, um de cada vez)</span></label>
+          <ol class="topicos-lista" id="sol-topicos-lista" style="display:none"></ol>
+          <div class="topico-novo">
+            <input type="text" id="sol-topico-novo" maxlength="200" placeholder="Ex.: Pagamos boletos com atraso todo mês">
+            <button type="button" class="btn btn-outline btn-sm" id="btn-add-topico"><i data-ic="plus"></i>Adicionar</button>
+          </div>
+          <div class="campo-ajuda">Tecle Enter para adicionar. Dá para editar ou remover cada tópico depois.</div>
+        </div>
+        <div class="campo">
+          <label for="solicitacao-objetivo">Por que isso é importante? <span class="opc">(opcional)</span></label>
+          <textarea id="solicitacao-objetivo" rows="3" placeholder="O resultado que você espera ou o problema que quer resolver"></textarea>
+        </div>
+      </div>
+      <aside class="sol-lateral">
+        <div class="sol-secao">
+          <div class="sol-secao-tit"><span>Fotos</span><span class="txt-fraco" id="sol-fotos-cont">0 de 6</span></div>
+          <label class="dropzone" id="sol-dropzone" for="sol-fotos-input" tabindex="0">
+            <i data-ic="image"></i>
+            <strong>Adicionar fotos</strong>
+            <span>Arraste aqui, clique para escolher ou cole um print. No celular, dá para tirar a foto na hora.</span>
+          </label>
+          <input type="file" id="sol-fotos-input" accept="image/*" multiple hidden>
+          <div class="fotos-grade" id="sol-fotos-grade"></div>
+        </div>
+        <div class="sol-secao">
+          <div class="sol-secao-tit"><span>Prioridade</span></div>
+          <div class="segmentado" role="radiogroup" aria-label="Prioridade">
+            <label><input type="radio" name="sol-prioridade" value="baixa"><span>Baixa</span></label>
+            <label><input type="radio" name="sol-prioridade" value="media" checked><span>Média</span></label>
+            <label><input type="radio" name="sol-prioridade" value="alta"><span>Alta</span></label>
+          </div>
+        </div>
+        <div class="sol-secao campo">
+          <label for="solicitacao-data">Prazo desejado <span class="opc">(opcional)</span></label>
+          <input type="date" id="solicitacao-data">
+        </div>
+        <div class="sol-secao">
+          <div class="sol-secao-tit"><span>O que acontece depois</span></div>
+          <ol class="passos">
+            <li>A CAP Consultoria recebe o pedido e analisa.</li>
+            <li>Montamos o plano 5W2H com responsável, prazo e custo.</li>
+            <li>Você acompanha a execução e aprova a entrega aqui no painel.</li>
+          </ol>
+        </div>
+      </aside>
+    </div>
+    <div class="mf-rodape">
+      <span class="mf-nota" id="sol-nota"></span>
       <button class="btn btn-outline" id="btn-cancelar-solicitacao">Cancelar</button>
-      <button class="btn btn-laranja" id="btn-enviar-solicitacao">Enviar solicitação</button>
+      <button class="btn btn-laranja" id="btn-enviar-solicitacao"><i data-ic="send"></i>Enviar solicitação</button>
     </div>
   </div>
+</div>
+
+<!-- Visualizador de fotos -->
+<div class="modal-overlay" id="modal-imagem" role="dialog" aria-modal="true" aria-label="Foto">
+  <button class="visor-btn visor-fechar" id="visor-fechar" title="Fechar" aria-label="Fechar"><i data-ic="x"></i></button>
+  <button class="visor-btn visor-ant" id="visor-ant" title="Foto anterior" aria-label="Foto anterior"><i data-ic="chevron-left"></i></button>
+  <img id="visor-img" alt="">
+  <button class="visor-btn visor-prox" id="visor-prox" title="Próxima foto" aria-label="Próxima foto"><i data-ic="chevron-right"></i></button>
+  <div class="visor-legenda" id="visor-legenda"></div>
 </div>
 
 <!-- MODAL: Nova/Editar Visita -->
@@ -1672,7 +1824,10 @@ const ICONES = {
   filter: '<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>',
   "user-x": '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m17 8 5 5M22 8l-5 5"/>',
   list: '<path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8M13 12h8M13 18h8"/>',
-  power: '<path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/>'
+  power: '<path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/>',
+  image: '<rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"/>',
+  send: '<path d="M14.54 21.69a.5.5 0 0 0 .94-.03l6.5-19a.5.5 0 0 0-.64-.64l-19 6.5a.5.5 0 0 0-.02.94l7.93 3.18a2 2 0 0 1 1.11 1.11z"/><path d="m21.85 2.15-10.94 10.94"/>',
+  paperclip: '<path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>'
 };
 function ic(nome, cls) {
   return '<svg class="ic' + (cls ? " " + cls : "") + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONES[nome] || ICONES.info) + '</svg>';
@@ -2160,10 +2315,10 @@ async function iniciarApp() {
     atualizarContadorEntregas();
     verificarEntregasPendentes();
     if (usuarioAtual.tipo === "admin") {
-      const faltaTarefas = todasTarefas.length > 0 && (!("fechado_pelo_cliente" in todasTarefas[0]) || !("como" in todasTarefas[0]) || !("custo_previsto" in todasTarefas[0]));
+      const faltaTarefas = todasTarefas.length > 0 && (!("fechado_pelo_cliente" in todasTarefas[0]) || !("como" in todasTarefas[0]) || !("custo_previsto" in todasTarefas[0]) || !("anexos" in todasTarefas[0]));
       const faltaVisitas = todasVisitas.length > 0 && !("ocorrencias_status" in todasVisitas[0]);
       if (faltaTarefas || faltaVisitas) {
-        mostrarBannerAviso("Atualização do banco pendente: execute o arquivo <strong>supabase_setup_v3.sql</strong> no SQL Editor do Supabase para ativar as perguntas Como? e Quanto? do 5W2H, o fechamento de entregas e a confirmação de visitas recorrentes.");
+        mostrarBannerAviso("Atualização do banco pendente: execute o arquivo <strong>supabase_setup_v4.sql</strong> no SQL Editor do Supabase para ativar fotos e tópicos nas solicitações, as perguntas Como? e Quanto? do 5W2H, o fechamento de entregas e a confirmação de visitas recorrentes.");
       }
     }
   } catch (err) { console.error("[iniciarApp] Falha nos avisos finais:", err); }
@@ -3599,9 +3754,8 @@ function abrirNovaTarefa() {
   document.getElementById("tarefa-descricao").value = "";
   document.getElementById("tarefa-objetivo").value = "";
   document.getElementById("tarefa-indicador").value = "";
-  document.getElementById("tarefa-abrangencia").value = "";
-  document.getElementById("tarefa-setor").value = "";
-  document.getElementById("campo-tarefa-setor").style.display = "none";
+  byId("tarefa-onde").value = "";
+  byId("tarefa-detalhes").open = false;
   document.getElementById("tarefa-categoria").value = "";
   document.getElementById("tarefa-colaborador").value = "";
   document.getElementById("tarefa-data-inicio").value = "";
@@ -3628,9 +3782,8 @@ window.abrirEdicaoTarefa = function(id) {
   document.getElementById("tarefa-descricao").value = t.descricao || "";
   document.getElementById("tarefa-objetivo").value = t.objetivo || "";
   document.getElementById("tarefa-indicador").value = t.indicador || "";
-  document.getElementById("tarefa-abrangencia").value = t.abrangencia || "";
-  document.getElementById("tarefa-setor").value = t.setor || "";
-  document.getElementById("campo-tarefa-setor").style.display = t.abrangencia === "setor" ? "block" : "none";
+  byId("tarefa-onde").value = t.abrangencia === "empresa_toda" ? "Empresa toda" : (t.setor || "");
+  byId("tarefa-detalhes").open = !!(temTexto(t.descricao) || temTexto(t.indicador) || temTexto(t.envolvidos) || temTexto(t.custo_detalhe));
   document.getElementById("tarefa-categoria").value = t.categoria_id || "";
   document.getElementById("tarefa-colaborador").value = t.colaborador || "";
   document.getElementById("tarefa-data-inicio").value = t.data_inicio || "";
@@ -3648,9 +3801,13 @@ window.abrirEdicaoTarefa = function(id) {
   setTimeout(() => { const f = byId("tarefa-titulo"); if (f) f.focus(); }, 60);
 };
 
-document.getElementById("tarefa-abrangencia").addEventListener("change", (e) => {
-  document.getElementById("campo-tarefa-setor").style.display = e.target.value === "setor" ? "block" : "none";
-});
+// Campos que crescem com o texto (Por quê? e Como?)
+function ajustarAltura(el) {
+  if (!el) return;
+  el.style.height = "auto";
+  el.style.height = Math.max(el.scrollHeight + 2, 40) + "px";
+}
+byId("modal-tarefa").addEventListener("input", e => { if (e.target.matches("textarea.auto")) ajustarAltura(e.target); });
 
 window.verDetalhesTarefa = function(id) {
   const t = todasTarefas.find(t => t.id === id);
@@ -3674,7 +3831,9 @@ window.verDetalhesTarefa = function(id) {
   if (t.status === "concluida") info.push(["Aceite do cliente", aceiteNaoSeAplica(t) ? "Anterior ao aceite" : (t.fechado_pelo_cliente ? "Fechado em " + fmtDataHora(t.fechado_cliente_em) : "Aguardando aceite")]);
 
   byId("detalhes-corpo").innerHTML =
+    `<div class="secao-titulo">Plano 5W2H</div>` +
     htmlMatriz5w2h(t) +
+    htmlPedidoCliente(t) +
     `<div class="secao-titulo">Andamento</div>` +
     htmlTimeline(t) +
     `<div class="info-grid">${info.map(i => `<div class="info-item"><div class="l">${i[0]}</div><div class="v">${i[1]}</div></div>`).join("")}</div>` +
@@ -3694,13 +3853,15 @@ window.verDetalhesTarefa = function(id) {
 document.getElementById("btn-salvar-tarefa").addEventListener("click", async () => {
   const id = document.getElementById("tarefa-id").value;
   const titulo = document.getElementById("tarefa-titulo").value.trim();
-  if (!titulo) { notificar("Informe o título do projeto, na pergunta O quê?"); byId("tarefa-titulo").focus(); return; }
+  if (!titulo) { notificar("Informe o que será feito, na pergunta O quê?"); byId("tarefa-titulo").focus(); return; }
   const clienteId = ehGestor() ? document.getElementById("tarefa-cliente").value : usuarioAtual.id;
   if (!clienteId) { notificar("Selecione um cliente."); return; }
   const custoTxt = byId("tarefa-custo").value.trim();
   const custo = custoTxt === "" ? null : parseMoeda(custoTxt);
   if (custoTxt !== "" && custo === null) { notificar("Informe o custo previsto como número, por exemplo 2.500,00."); byId("tarefa-custo").focus(); return; }
 
+  const ondeTxt = byId("tarefa-onde").value.trim();
+  const ondeEmpresaToda = /^(a\s+)?empresa(\s+toda|\s+inteira)?$|^toda\s+(a\s+)?empresa$/i.test(ondeTxt);
   const status = document.getElementById("tarefa-status").value;
   const dataInicio = document.getElementById("tarefa-data-inicio").value || null;
   const dataPrevista = document.getElementById("tarefa-data").value || null;
@@ -3712,8 +3873,8 @@ document.getElementById("btn-salvar-tarefa").addEventListener("click", async () 
     descricao: document.getElementById("tarefa-descricao").value.trim(),
     objetivo: document.getElementById("tarefa-objetivo").value.trim(),
     indicador: document.getElementById("tarefa-indicador").value.trim(),
-    abrangencia: document.getElementById("tarefa-abrangencia").value || null,
-    setor: document.getElementById("tarefa-abrangencia").value === "setor" ? document.getElementById("tarefa-setor").value.trim() : "",
+    abrangencia: ondeTxt ? (ondeEmpresaToda ? "empresa_toda" : "setor") : null,
+    setor: ondeTxt && !ondeEmpresaToda ? ondeTxt : "",
     categoria_id: document.getElementById("tarefa-categoria").value || null,
     colaborador: document.getElementById("tarefa-colaborador").value.trim(),
     data_inicio: dataInicio,
@@ -3771,7 +3932,7 @@ document.getElementById("btn-salvar-tarefa").addEventListener("click", async () 
     document.getElementById("modal-tarefa").style.display = "none";
     atualizarPaginaAtual();
     notificar(id ? "Projeto atualizado." : "Projeto criado.");
-    if (!extrasOk) notificar("As respostas de Como?, Envolvidos e Quanto? não foram salvas porque o banco ainda não tem essas colunas. Execute o supabase_setup_v3.sql no Supabase.", "aviso");
+    if (!extrasOk) notificar("As respostas de Como?, Envolvidos e Quanto? não foram salvas porque o banco ainda não tem essas colunas. Execute o supabase_setup_v4.sql no Supabase.", "aviso");
   } catch (err) {
     notificar("Erro ao salvar projeto: " + err.message);
   } finally {
@@ -3813,16 +3974,16 @@ function parseMoeda(txt) {
   return isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : null;
 }
 function textoOnde(t) {
-  if (t.abrangencia === "setor") return "Setor" + (t.setor ? ": " + t.setor : "");
   if (t.abrangencia === "empresa_toda") return "Empresa toda";
-  return "";
+  if (t.abrangencia === "setor") return t.setor ? t.setor : "Um setor";
+  return t.setor || "";
 }
 function temTexto(v) { return !!(v && String(v).trim()); }
 function respostas5w2h(t) {
   return [
     { k: "oque", q: "O quê?", en: "What", ok: temTexto(t.titulo) },
     { k: "porque", q: "Por quê?", en: "Why", ok: temTexto(t.objetivo) },
-    { k: "onde", q: "Onde?", en: "Where", ok: !!t.abrangencia },
+    { k: "onde", q: "Onde?", en: "Where", ok: !!textoOnde(t) },
     { k: "quando", q: "Quando?", en: "When", ok: !!t.data_prevista },
     { k: "quem", q: "Quem?", en: "Who", ok: temTexto(t.colaborador) },
     { k: "como", q: "Como?", en: "How", ok: temTexto(t.como) },
@@ -3847,27 +4008,86 @@ function htmlComo(txt) {
   return `<ol>${e.map(x => `<li>${esc(x)}</li>`).join("")}</ol>`;
 }
 // Conteúdo de cada uma das 7 respostas, já em HTML (usado na ficha e na impressão).
+// A resposta principal vem primeiro; detalhes opcionais aparecem em linhas menores.
 function conteudo5w2h(t) {
   const custo = custoNumero(t);
-  const rot = txt => `<span class="rot">${txt}</span>`;
+  const ex = (rot, txt) => temTexto(txt) ? `<span class="extra"><b>${rot}:</b> ${esc(txt)}</span>` : "";
   return {
-    oque: esc(t.titulo) + (t.descricao ? rot("Escopo") + esc(t.descricao) : ""),
-    porque: esc(t.objetivo || "") + (t.indicador ? rot("Indicador de resultado") + esc(t.indicador) : ""),
+    oque: esc(t.titulo) + ex("Escopo", t.descricao),
+    porque: esc(t.objetivo || "") + ex("Indicador", t.indicador),
     onde: esc(textoOnde(t)),
-    quando: (t.data_inicio ? rot("Início") + fmtData(t.data_inicio) : "") + rot("Prazo") + fmtData(t.data_prevista) + (estaAtrasada(t) ? ' <span class="tag-atraso">atrasado</span>' : ""),
-    quem: (t.colaborador ? rot("Responsável") + esc(t.colaborador) : "") + (t.envolvidos ? rot("Envolvidos") + esc(t.envolvidos) : ""),
+    quando: (t.data_prevista ? fmtData(t.data_prevista) : "") + (estaAtrasada(t) ? ' <span class="tag-atraso">atrasado</span>' : "") + (t.data_inicio ? `<span class="extra"><b>Início:</b> ${fmtData(t.data_inicio)}</span>` : ""),
+    quem: esc(t.colaborador || "") + ex("Envolvidos", t.envolvidos),
     como: htmlComo(t.como),
-    quanto: (custo !== null ? `<span class="valor-moeda">${fmtMoeda(custo)}</span>` : "") + (t.custo_detalhe ? rot("Recursos") + esc(t.custo_detalhe) : "")
+    quanto: (custo !== null ? `<span class="valor-moeda">${fmtMoeda(custo)}</span>` : "") + ex("Recursos", t.custo_detalhe)
   };
 }
 function htmlMatriz5w2h(t) {
   const c = conteudo5w2h(t);
-  return `<div class="w2h-matriz">` + respostas5w2h(t).map(r =>
-    `<div class="w2h-celula ${r.k === "oque" ? "larga" : ""} ${r.ok ? "" : "vazia"}">
-      <div class="w2h-celula-cab"><span class="w2h-pergunta">${r.q}</span><span class="w2h-en">${r.en}</span></div>
-      <div class="w2h-resposta">${r.ok ? c[r.k] : "Ainda sem resposta"}</div>
-    </div>`).join("") + `</div>`;
+  return `<div class="w2h-lista">` + respostas5w2h(t).map(r =>
+    `<div class="w2h-item ${r.ok ? "" : "vazia"}"><div class="w2h-item-q">${r.q}<small>${r.en}</small></div><div class="w2h-item-r">${r.ok ? c[r.k] : "Sem resposta"}</div></div>`
+  ).join("") + `</div>`;
 }
+
+// ---- Tópicos e fotos enviados pelo cliente ----
+function listaJson(v) {
+  if (Array.isArray(v)) return v;
+  if (typeof v === "string" && v.trim().startsWith("[")) { try { const r = JSON.parse(v); return Array.isArray(r) ? r : []; } catch (e) { /* ignora */ } }
+  return [];
+}
+function topicosDe(t) { return listaJson(t.topicos).map(x => typeof x === "string" ? x : (x && x.texto) || "").filter(temTexto); }
+function anexosDe(t) { return listaJson(t.anexos).filter(a => a && a.url); }
+function htmlTopicos(t) {
+  const tp = topicosDe(t);
+  return tp.length ? `<ol class="topicos-mostra">${tp.map(x => `<li>${esc(x)}</li>`).join("")}</ol>` : "";
+}
+function htmlAnexos(t) {
+  const a = anexosDe(t);
+  if (!a.length) return "";
+  return `<div class="anexos-linha">${a.map((x, i) => `<img src="${esc(x.url)}" alt="${esc(x.nome || "Foto " + (i + 1))}" loading="lazy" title="Ampliar foto" onclick="event.stopPropagation();abrirVisorTarefa('${t.id}',${i})">`).join("")}</div>`;
+}
+function htmlPedidoCliente(t) {
+  const tp = htmlTopicos(t), an = htmlAnexos(t);
+  if (!tp && !an) return "";
+  const n = anexosDe(t).length;
+  return `<div class="secao-titulo">Pedido do cliente</div><div class="pedido-cliente">` +
+    (tp ? `<div class="rotulo">Tópicos</div>${tp}` : "") +
+    (an ? `<div class="rotulo">${plural(n, "foto", "fotos")}</div>${an}` : "") + `</div>`;
+}
+window.abrirVisorTarefa = function (id, i) {
+  const t = todasTarefas.find(x => x.id === id);
+  if (!t) return;
+  const a = anexosDe(t);
+  abrirVisor(a.map(x => x.url), i);
+};
+
+// ---- Visualizador de fotos ----
+let visorFotos = [], visorIdx = 0;
+function abrirVisor(urls, i) {
+  if (!urls || !urls.length) return;
+  visorFotos = urls;
+  visorIdx = Math.min(Math.max(i || 0, 0), urls.length - 1);
+  mostrarFotoVisor();
+  byId("modal-imagem").style.display = "flex";
+}
+function mostrarFotoVisor() {
+  byId("visor-img").src = visorFotos[visorIdx];
+  byId("visor-legenda").textContent = visorFotos.length > 1 ? `${visorIdx + 1} de ${visorFotos.length}` : "";
+  byId("visor-ant").style.display = visorFotos.length > 1 ? "" : "none";
+  byId("visor-prox").style.display = visorFotos.length > 1 ? "" : "none";
+}
+function fecharVisor() { byId("modal-imagem").style.display = "none"; byId("visor-img").removeAttribute("src"); }
+function moverVisor(d) { visorIdx = (visorIdx + d + visorFotos.length) % visorFotos.length; mostrarFotoVisor(); }
+byId("visor-fechar").addEventListener("click", fecharVisor);
+byId("visor-ant").addEventListener("click", e => { e.stopPropagation(); moverVisor(-1); });
+byId("visor-prox").addEventListener("click", e => { e.stopPropagation(); moverVisor(1); });
+byId("modal-imagem").addEventListener("click", e => { if (e.target.id === "modal-imagem") fecharVisor(); });
+document.addEventListener("keydown", e => {
+  if (byId("modal-imagem").style.display !== "flex") return;
+  if (e.key === "Escape") { e.stopImmediatePropagation(); fecharVisor(); }
+  else if (e.key === "ArrowLeft") moverVisor(-1);
+  else if (e.key === "ArrowRight") moverVisor(1);
+}, true);
 
 // Progresso ao vivo no formulário do projeto
 function respostasForm5w2h() {
@@ -3875,16 +4095,17 @@ function respostasForm5w2h() {
   return {
     oque: !!v("tarefa-titulo"),
     porque: !!v("tarefa-objetivo"),
-    onde: !!v("tarefa-abrangencia"),
+    onde: !!v("tarefa-onde"),
     quando: !!v("tarefa-data"),
     quem: !!v("tarefa-colaborador"),
     como: !!v("tarefa-como"),
-    quanto: v("tarefa-custo") !== "" || !!v("tarefa-custo-detalhe")
+    quanto: v("tarefa-custo") !== ""
   };
 }
 function atualizarProgressoForm5w2h() {
   const r = respostasForm5w2h();
-  document.querySelectorAll("#modal-tarefa .w2h-secao").forEach(sec => sec.classList.toggle("ok", !!r[sec.dataset.w2h]));
+  document.querySelectorAll("#modal-tarefa .w2h-linha").forEach(sec => sec.classList.toggle("ok", !!r[sec.dataset.w2h]));
+  document.querySelectorAll("#modal-tarefa textarea.auto").forEach(ajustarAltura);
   const oks = ["oque", "porque", "onde", "quando", "quem", "como", "quanto"].map(k => r[k]);
   const n = oks.filter(Boolean).length;
   const m = byId("tarefa-medidor");
@@ -3955,13 +4176,13 @@ function renderizarPlano() {
     const como = etapasComo(t.como);
     const custo = custoNumero(t);
     return `<tr class="clicavel ${atr ? "linha-atrasada" : ""}" onclick="verDetalhesTarefa('${t.id}')">
-      <td class="col-oque"><span class="link-projeto">${esc(t.titulo)}</span>${g ? `<span class="menor">${esc(nomeEmpresaTarefa(t))}</span>` : ""}${t.descricao ? `<div class="desc-clamp">${esc(t.descricao)}</div>` : ""}<div class="projeto-meta">${htmlStatusTarefa(t)}${htmlMedidor5w2h(t, true)}${t.categoria_id ? htmlCategoria(t.categoria_id) : ""}</div></td>
-      <td>${t.objetivo ? `<div class="clamp3">${esc(t.objetivo)}</div>` : falta}${t.indicador ? `<span class="menor">Indicador: ${esc(t.indicador)}</span>` : ""}</td>
+      <td class="col-oque"><span class="link-projeto">${esc(t.titulo)}</span>${g ? `<span class="menor">${esc(nomeEmpresaTarefa(t))}</span>` : ""}<div class="projeto-meta">${htmlStatusTarefa(t)}${htmlMedidor5w2h(t, true)}${t.categoria_id ? htmlCategoria(t.categoria_id) : ""}</div></td>
+      <td>${t.objetivo ? `<div class="clamp3">${esc(t.objetivo)}</div>` : falta}</td>
       <td class="col-curta">${textoOnde(t) ? esc(textoOnde(t)) : falta}</td>
-      <td class="nowrap col-curta">${t.data_prevista ? fmtData(t.data_prevista) : falta}${atr ? '<br><span class="tag-atraso">atrasado</span>' : ""}${t.data_inicio ? `<span class="menor">Início ${fmtData(t.data_inicio)}</span>` : ""}</td>
-      <td>${temTexto(t.colaborador) ? htmlPessoa(t.colaborador) : falta}${t.envolvidos ? `<span class="menor">${esc(t.envolvidos)}</span>` : ""}</td>
+      <td class="nowrap col-curta">${t.data_prevista ? fmtData(t.data_prevista) : falta}${atr ? '<br><span class="tag-atraso">atrasado</span>' : ""}</td>
+      <td>${temTexto(t.colaborador) ? htmlPessoa(t.colaborador) : falta}</td>
       <td>${como.length ? `<div class="clamp3">${como.map((e, i) => (como.length > 1 ? (i + 1) + ". " : "") + esc(e)).join("\n")}</div>${como.length > 4 ? `<span class="menor">${como.length} etapas</span>` : ""}` : falta}</td>
-      <td class="nowrap col-curta">${custo !== null ? `<strong class="mono">${fmtMoeda(custo)}</strong>` : falta}${t.custo_detalhe ? `<span class="menor" style="white-space:normal">${esc(t.custo_detalhe)}</span>` : ""}</td>
+      <td class="nowrap col-curta">${custo !== null ? `<strong class="mono">${fmtMoeda(custo)}</strong>` : falta}</td>
     </tr>`;
   }).join("");
   const total = lista.reduce((s, t) => s + (custoNumero(t) || 0), 0);
@@ -4015,6 +4236,15 @@ td .m{display:block;color:#6b7280;font-size:9.5px;margin-top:3px}
 ol{margin:0;padding-left:15px}
 tr{page-break-inside:avoid}
 tfoot td{font-weight:700;border-top:2px solid #1f2430;border-bottom:none}
+.f5{width:100%;border-collapse:collapse;border:1px solid #cdd1d9}
+.f5 th{width:120px;background:#f4f5f7;border:1px solid #cdd1d9;font-size:14px;vertical-align:top;padding:9px 11px}
+.f5 td{border:1px solid #cdd1d9;padding:9px 12px;font-size:11.5px}
+.f5 .vazio{color:#8a909c;font-style:italic}
+.extra{display:block;color:#6b7280;font-size:10px;margin-top:3px;white-space:pre-wrap}
+.extra b{font-weight:600}
+h2{font-size:13px;margin:16px 0 6px}
+.fotos{display:flex;gap:8px;flex-wrap:wrap}
+.fotos img{width:150px;height:150px;object-fit:cover;border:1px solid #cdd1d9;border-radius:6px}
 .ficha{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #cdd1d9;border-left:1px solid #cdd1d9}
 .ficha .c{padding:11px 13px;border-right:1px solid #cdd1d9;border-bottom:1px solid #cdd1d9;page-break-inside:avoid}
 .ficha .l{grid-column:1/-1}
@@ -4042,13 +4272,13 @@ function imprimirPlano(lista) {
   const linhas = lista.map(t => {
     const custo = custoNumero(t);
     return `<tr>
-    <td><b>${esc(t.titulo)}</b>${g ? `<span class="m">${esc(nomeEmpresaTarefa(t))}</span>` : ""}${t.descricao ? `<span class="m">${esc(t.descricao)}</span>` : ""}</td>
-    <td>${esc(t.objetivo || "—")}${t.indicador ? `<span class="m">Indicador: ${esc(t.indicador)}</span>` : ""}</td>
+    <td><b>${esc(t.titulo)}</b>${g ? `<span class="m">${esc(nomeEmpresaTarefa(t))}</span>` : ""}</td>
+    <td>${esc(t.objetivo || "—")}</td>
     <td>${esc(textoOnde(t) || "—")}</td>
-    <td>${t.data_inicio ? fmtData(t.data_inicio) + " a<br>" : ""}${fmtData(t.data_prevista)}${estaAtrasada(t) ? '<span class="m tag-atraso">atrasado</span>' : ""}</td>
-    <td>${esc(t.colaborador || "—")}${t.envolvidos ? `<span class="m">${esc(t.envolvidos)}</span>` : ""}</td>
+    <td>${fmtData(t.data_prevista)}${estaAtrasada(t) ? '<span class="m tag-atraso">atrasado</span>' : ""}</td>
+    <td>${esc(t.colaborador || "—")}</td>
     <td>${htmlComo(t.como) || "—"}</td>
-    <td>${custo !== null ? fmtMoeda(custo) : "—"}${t.custo_detalhe ? `<span class="m">${esc(t.custo_detalhe)}</span>` : ""}</td>
+    <td>${custo !== null ? fmtMoeda(custo) : "—"}</td>
     <td>${t.aprovada === false ? "Aguardando aprovação" : labelStatus(t.status)}</td></tr>`;
   }).join("");
   const total = lista.reduce((s, t) => s + (custoNumero(t) || 0), 0);
@@ -4063,9 +4293,12 @@ window.imprimirProjeto = function (id) {
   const c = conteudo5w2h(t);
   const cat = getCategoriaById(t.categoria_id);
   const meta = `<div class="meta"><span>Empresa: <b>${esc(nomeEmpresaTarefa(t))}</b></span><span>Situação: <b>${t.aprovada === false ? "Aguardando aprovação" : labelStatus(t.status)}</b></span><span>Prioridade: <b>${labelPrioridade(t.prioridade)}</b></span>${cat ? `<span>Categoria: <b>${esc(cat.nome)}</b></span>` : ""}<span>Plano respondido: <b>${pontos5w2h(t)} de 7</b></span></div>`;
-  const ficha = `<div class="ficha">` + respostas5w2h(t).map(r =>
-    `<div class="c ${r.k === "oque" ? "l" : ""}"><h3>${r.q}<small>${r.en}</small></h3>${r.ok ? c[r.k] : '<span class="vazio">Sem resposta</span>'}</div>`).join("") + `</div>`;
-  abrirJanelaImpressao("Ficha 5W2H: " + t.titulo, AREAS[areaDaTarefa(t)] ? "Área " + AREAS[areaDaTarefa(t)].label : "", meta + ficha, true);
+  const ficha = `<table class="f5">` + respostas5w2h(t).map(r =>
+    `<tr><th>${r.q}<small>${r.en}</small></th><td>${r.ok ? c[r.k] : '<span class="vazio">Sem resposta</span>'}</td></tr>`).join("") + `</table>`;
+  const tp = topicosDe(t), fotos = anexosDe(t);
+  const pedido = (tp.length ? `<h2>Tópicos do cliente</h2><ol>${tp.map(x => `<li>${esc(x)}</li>`).join("")}</ol>` : "") +
+    (fotos.length ? `<h2>Fotos do cliente</h2><div class="fotos">${fotos.map(a => `<img src="${esc(a.url)}" alt="">`).join("")}</div>` : "");
+  abrirJanelaImpressao("Ficha 5W2H: " + t.titulo, AREAS[areaDaTarefa(t)] ? "Área " + AREAS[areaDaTarefa(t)].label : "", meta + ficha + pedido, true);
 };
 
 // Célula de indicador (faixa de KPIs)
@@ -4152,8 +4385,10 @@ function renderizarSolicitacoes() {
           <div class="solicitacao-info">
             <strong>${esc(t.titulo)}</strong>
             <div class="sol-meta"><span>${esc(empresa)}</span><span class="badge-prioridade ${t.prioridade}">Prioridade ${labelPrioridade(t.prioridade).toLowerCase()}</span><span>Prazo desejado: ${prazo}</span>${t.criado_em ? `<span>Enviada em ${fmtDataHora(t.criado_em)}</span>` : ""}</div>
-            ${t.objetivo ? `<div class="sol-txt"><b>Por quê:</b> ${esc(t.objetivo)}</div>` : ""}
-            ${t.descricao ? `<div class="sol-txt">${esc(t.descricao)}</div>` : ""}
+            ${t.descricao ? `<div class="sol-txt" style="white-space:pre-wrap">${esc(t.descricao)}</div>` : ""}
+            ${t.objetivo ? `<div class="sol-txt"><span class="rot-min">Por quê:</span> ${esc(t.objetivo)}</div>` : ""}
+            ${htmlTopicos(t)}
+            ${htmlAnexos(t)}
           </div>
         </div>
         <div class="solicitacao-acoes">
@@ -4190,45 +4425,246 @@ window.rejeitarSolicitacao = async function(id) {
   } catch (err) { notificar("Erro ao rejeitar: " + err.message); }
 };
 
-document.getElementById("btn-cancelar-solicitacao").addEventListener("click", () => document.getElementById("modal-solicitacao").style.display = "none");
-document.getElementById("btn-enviar-solicitacao").addEventListener("click", async () => {
-  const titulo = document.getElementById("solicitacao-titulo").value.trim();
-  if (!titulo) { notificar("Descreva o que você precisa."); return; }
-  const body = {
-    cliente_id: usuarioAtual.id,
-    area: areaAtual,
-    titulo,
-    descricao: document.getElementById("solicitacao-descricao").value.trim(),
-    objetivo: document.getElementById("solicitacao-objetivo").value.trim(),
-    prioridade: document.getElementById("solicitacao-prioridade").value,
-    data_prevista: document.getElementById("solicitacao-data").value || null,
-    status: "aberta",
-    criado_por_cliente: true,
-    aprovada: false
-  };
+/* ---- Solicitação do cliente: tópicos e fotos ---- */
+const BUCKET_ANEXOS = "cap-anexos";
+const MAX_FOTOS = 6;
+let solTopicos = [];
+let solFotos = []; // { blob, url, nome, largura, altura }
+
+function solicitacaoTemConteudo() {
+  return !!(byId("solicitacao-titulo").value.trim() || byId("solicitacao-descricao").value.trim() || byId("solicitacao-objetivo").value.trim() || solTopicos.length || solFotos.length);
+}
+async function fecharSolicitacao() {
+  if (solicitacaoTemConteudo() && !(await confirmar("Descartar esta solicitação? O que você escreveu e as fotos serão perdidos.", { ok: "Descartar", perigo: true }))) return;
+  byId("modal-solicitacao").style.display = "none";
+  limparFotosSol();
+}
+byId("btn-cancelar-solicitacao").addEventListener("click", fecharSolicitacao);
+byId("btn-fechar-solicitacao").addEventListener("click", fecharSolicitacao);
+
+function atualizarContadoresSol() {
+  byId("sol-cont-titulo").textContent = byId("solicitacao-titulo").value.length + "/120";
+  byId("sol-cont-desc").textContent = byId("solicitacao-descricao").value.length + "/3000";
+}
+byId("solicitacao-titulo").addEventListener("input", atualizarContadoresSol);
+byId("solicitacao-descricao").addEventListener("input", atualizarContadoresSol);
+
+function renderizarTopicosSol() {
+  const ol = byId("sol-topicos-lista");
+  ol.innerHTML = solTopicos.map((t, i) => `<li class="topico-item"><input type="text" value="${esc(t)}" maxlength="200" data-i="${i}" aria-label="Tópico ${i + 1}"><button type="button" class="btn-icone perigo" data-rm="${i}" title="Remover tópico" aria-label="Remover tópico ${i + 1}">${ic("x")}</button></li>`).join("");
+  ol.style.display = solTopicos.length ? "" : "none";
+}
+function adicionarTopicoSol() {
+  const inp = byId("sol-topico-novo");
+  const v = inp.value.trim();
+  if (!v) { inp.focus(); return; }
+  if (solTopicos.length >= 20) { notificar("Limite de 20 tópicos por solicitação.", "aviso"); return; }
+  solTopicos.push(v);
+  inp.value = "";
+  renderizarTopicosSol();
+  inp.focus();
+}
+byId("btn-add-topico").addEventListener("click", adicionarTopicoSol);
+byId("sol-topico-novo").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); adicionarTopicoSol(); } });
+byId("sol-topicos-lista").addEventListener("input", e => { if (e.target.dataset.i !== undefined) solTopicos[+e.target.dataset.i] = e.target.value; });
+byId("sol-topicos-lista").addEventListener("click", e => {
+  const b = e.target.closest("[data-rm]");
+  if (!b) return;
+  solTopicos.splice(+b.dataset.rm, 1);
+  renderizarTopicosSol();
+});
+
+// Fotos: reduz no próprio aparelho (máx. 1600 px, JPEG) antes de enviar.
+function carregarImagem(arquivo) {
+  return new Promise((ok, falha) => {
+    const url = URL.createObjectURL(arquivo);
+    const img = new Image();
+    img.onload = () => ok({ img, url });
+    img.onerror = () => { URL.revokeObjectURL(url); falha(new Error("formato não suportado")); };
+    img.src = url;
+  });
+}
+async function comprimirImagem(arquivo, lado = 1600, qualidade = 0.82) {
+  const { img, url } = await carregarImagem(arquivo);
+  const fator = Math.min(1, lado / Math.max(img.naturalWidth, img.naturalHeight));
+  const w = Math.max(1, Math.round(img.naturalWidth * fator)), h = Math.max(1, Math.round(img.naturalHeight * fator));
+  const tela = document.createElement("canvas");
+  tela.width = w; tela.height = h;
+  const ctx = tela.getContext("2d");
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, w, h);
+  ctx.drawImage(img, 0, 0, w, h);
+  URL.revokeObjectURL(url);
+  const blob = await new Promise(r => tela.toBlob(r, "image/jpeg", qualidade));
+  if (!blob) throw new Error("falha ao converter a imagem");
+  return { blob, largura: w, altura: h };
+}
+function renderizarFotosSol() {
+  byId("sol-fotos-grade").innerHTML = solFotos.map((f, i) =>
+    `<div class="foto-thumb"><img src="${f.url}" alt="${esc(f.nome)}" data-ver="${i}"><button type="button" data-rmfoto="${i}" title="Remover foto" aria-label="Remover foto ${i + 1}">${ic("x")}</button></div>`).join("");
+  byId("sol-fotos-cont").textContent = `${solFotos.length} de ${MAX_FOTOS}`;
+  byId("sol-dropzone").classList.toggle("cheio", solFotos.length >= MAX_FOTOS);
+}
+function limparFotosSol() {
+  solFotos.forEach(f => URL.revokeObjectURL(f.url));
+  solFotos = [];
+  renderizarFotosSol();
+}
+async function adicionarFotosSol(lista) {
+  const arquivos = [...(lista || [])].filter(f => /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(f.name || ""));
+  if (!arquivos.length) { notificar("Selecione arquivos de imagem (JPG, PNG ou WEBP).", "aviso"); return; }
+  const vagas = MAX_FOTOS - solFotos.length;
+  if (vagas <= 0) { notificar(`Limite de ${MAX_FOTOS} fotos por solicitação.`, "aviso"); return; }
+  if (arquivos.length > vagas) notificar(`Só cabem mais ${plural(vagas, "foto", "fotos")}. As demais foram ignoradas.`, "aviso");
+  byId("sol-nota").textContent = "Preparando fotos...";
+  for (const f of arquivos.slice(0, vagas)) {
+    if (f.size > 25 * 1024 * 1024) { notificar(`A foto "${f.name}" passa de 25 MB e foi ignorada.`, "aviso"); continue; }
+    try {
+      const r = await comprimirImagem(f);
+      solFotos.push({ blob: r.blob, url: URL.createObjectURL(r.blob), nome: f.name || "foto.jpg", largura: r.largura, altura: r.altura });
+      renderizarFotosSol();
+    } catch (e) {
+      notificar(`Não foi possível abrir "${f.name}". Use fotos em JPG, PNG ou WEBP.`);
+    }
+  }
+  byId("sol-nota").textContent = "";
+}
+byId("sol-fotos-input").addEventListener("change", e => { adicionarFotosSol(e.target.files); e.target.value = ""; });
+byId("sol-fotos-grade").addEventListener("click", e => {
+  const rm = e.target.closest("[data-rmfoto]");
+  if (rm) { const i = +rm.dataset.rmfoto; URL.revokeObjectURL(solFotos[i].url); solFotos.splice(i, 1); renderizarFotosSol(); return; }
+  const ver = e.target.closest("[data-ver]");
+  if (ver) abrirVisor(solFotos.map(f => f.url), +ver.dataset.ver);
+});
+(function ligarArrastarFotos() {
+  const dz = byId("sol-dropzone");
+  ["dragenter", "dragover"].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add("arrastando"); }));
+  ["dragleave", "drop"].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove("arrastando"); }));
+  dz.addEventListener("drop", e => adicionarFotosSol(e.dataTransfer ? e.dataTransfer.files : []));
+  dz.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); byId("sol-fotos-input").click(); } });
+  // Evita que uma foto solta fora da área abra no navegador e feche o formulário
+  byId("modal-solicitacao").addEventListener("dragover", e => e.preventDefault());
+  byId("modal-solicitacao").addEventListener("drop", e => { e.preventDefault(); if (!dz.contains(e.target)) adicionarFotosSol(e.dataTransfer ? e.dataTransfer.files : []); });
+  // Colar um print (Ctrl+V) enquanto o formulário está aberto
+  document.addEventListener("paste", e => {
+    if (byId("modal-solicitacao").style.display !== "flex" || !e.clipboardData) return;
+    const imgs = [...e.clipboardData.items].filter(it => it.kind === "file" && /^image\//.test(it.type)).map(it => it.getAsFile()).filter(Boolean);
+    if (imgs.length) { e.preventDefault(); adicionarFotosSol(imgs); }
+  });
+})();
+
+async function enviarFotoStorage(blob, caminho) {
+  const controle = new AbortController();
+  const timer = setTimeout(() => controle.abort(), 45000);
   try {
-    const criado = await sb(`cap_tarefas`, { method: "POST", body: JSON.stringify(body) });
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET_ANEXOS}/${caminho}`, {
+      method: "POST",
+      signal: controle.signal,
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}`, "Content-Type": blob.type || "image/jpeg", "x-upsert": "true" },
+      body: blob
+    });
+    if (!res.ok) throw new Error(`Storage ${res.status}: ${(await res.text()).slice(0, 160)}`);
+    return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET_ANEXOS}/${caminho}`;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+function blobParaDataUrl(blob) {
+  return new Promise((ok, falha) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = falha; r.readAsDataURL(blob); });
+}
+// Envia as fotos para o Storage do Supabase. Se o armazenamento ainda não
+// estiver configurado (SQL v4 não executado), guarda uma cópia menor junto da solicitação.
+async function prepararAnexosSol(progresso) {
+  const anexos = [];
+  let storageOk = true;
+  const lote = Date.now();
+  for (let i = 0; i < solFotos.length; i++) {
+    const f = solFotos[i];
+    progresso(i + 1, solFotos.length);
+    let url = null;
+    if (storageOk) {
+      try { url = await enviarFotoStorage(f.blob, `solicitacoes/${usuarioAtual.id}/${lote}-${i + 1}.jpg`); }
+      catch (e) { console.warn("Storage indisponível, usando cópia embutida:", e.message); storageOk = false; }
+    }
+    if (!url) {
+      const menor = await comprimirImagem(f.blob, 1024, 0.7);
+      url = await blobParaDataUrl(menor.blob);
+    }
+    anexos.push({ url, nome: f.nome, largura: f.largura, altura: f.altura });
+  }
+  return { anexos, storageOk };
+}
+
+byId("btn-enviar-solicitacao").addEventListener("click", async () => {
+  const titulo = byId("solicitacao-titulo").value.trim();
+  if (!titulo) { notificar("Descreva o que você precisa no primeiro campo."); byId("solicitacao-titulo").focus(); return; }
+  const pendente = byId("sol-topico-novo").value.trim();
+  if (pendente) { solTopicos.push(pendente); byId("sol-topico-novo").value = ""; renderizarTopicosSol(); }
+  const topicos = solTopicos.map(x => String(x).trim()).filter(Boolean);
+  const marcada = document.querySelector('input[name="sol-prioridade"]:checked');
+  const prioridade = marcada ? marcada.value : "media";
+  const btn = byId("btn-enviar-solicitacao");
+  const rotulo = btn.innerHTML;
+  btn.disabled = true;
+  byId("btn-cancelar-solicitacao").disabled = true;
+  try {
+    let anexos = [];
+    if (solFotos.length) {
+      const r = await prepararAnexosSol((i, n) => { btn.textContent = `Enviando foto ${i} de ${n}...`; });
+      anexos = r.anexos;
+    }
+    btn.textContent = "Enviando solicitação...";
+    const body = {
+      cliente_id: usuarioAtual.id,
+      area: areaAtual,
+      titulo,
+      descricao: byId("solicitacao-descricao").value.trim(),
+      objetivo: byId("solicitacao-objetivo").value.trim(),
+      prioridade,
+      data_prevista: byId("solicitacao-data").value || null,
+      status: "aberta",
+      criado_por_cliente: true,
+      aprovada: false
+    };
+    let criado, fotosPerdidas = false;
+    try {
+      criado = await sb(`cap_tarefas`, { method: "POST", body: JSON.stringify({ ...body, topicos, anexos }) });
+    } catch (e) {
+      if (!/PGRST204|column|schema cache|coluna/i.test(e.message)) throw e;
+      // Banco ainda sem as colunas de tópicos e fotos: guarda tudo dentro da descrição.
+      const links = anexos.filter(a => /^https?:/.test(a.url)).map(a => a.url);
+      fotosPerdidas = anexos.length > links.length;
+      const extra = (topicos.length ? "\n\nTópicos:\n" + topicos.map(x => "• " + x).join("\n") : "") + (links.length ? "\n\nFotos:\n" + links.join("\n") : "");
+      criado = await sb(`cap_tarefas`, { method: "POST", body: JSON.stringify({ ...body, descricao: (body.descricao + extra).trim() }) });
+    }
     if (!criado || !criado[0]) {
       throw new Error("O Supabase aceitou o pedido mas não devolveu a solicitação criada. Verifique as permissões (RLS) da tabela cap_tarefas.");
     }
-    const novaSolicitacao = { ...criado[0], area: criado[0].area || body.area };
-    todasTarefas.unshift(novaSolicitacao);
-    const prioridadeTxt = { baixa: "Baixa", media: "Média", alta: "Alta" }[body.prioridade] || body.prioridade;
+    todasTarefas.unshift({ ...criado[0], area: criado[0].area || body.area });
+    const prioridadeTxt = { baixa: "Baixa", media: "Média", alta: "Alta" }[prioridade] || prioridade;
     const prazoTxt = body.data_prevista ? body.data_prevista.split("-").reverse().join("/") : "não informado";
     notificarWhatsApp(
       `📥 *Nova solicitação no sistema CAP*\n\n` +
       `*Cliente:* ${usuarioAtual.empresa || usuarioAtual.nome || "—"}\n` +
-      `*Título:* ${body.titulo}\n` +
+      `*O que precisa:* ${titulo}\n` +
+      (body.descricao ? `*Ideia:* ${body.descricao.slice(0, 500)}${body.descricao.length > 500 ? "..." : ""}\n` : "") +
+      (topicos.length ? `*Tópicos:*\n${topicos.map((x, i) => `${i + 1}. ${x}`).join("\n")}\n` : "") +
       (body.objetivo ? `*Por quê:* ${body.objetivo}\n` : "") +
-      (body.descricao ? `*Descrição:* ${body.descricao}\n` : "") +
+      (anexos.length ? `*Fotos:* ${anexos.length} anexada(s)\n` : "") +
       `*Prioridade:* ${prioridadeTxt}\n` +
       `*Prazo desejado:* ${prazoTxt}\n\n` +
       `Acesse o sistema em Solicitações para aprovar ou rejeitar.`
     );
-    document.getElementById("modal-solicitacao").style.display = "none";
-    notificar("Solicitação enviada! A CAP Consultoria vai analisar em breve.");
+    byId("modal-solicitacao").style.display = "none";
+    limparFotosSol();
+    notificar("Solicitação enviada. A CAP Consultoria vai analisar e retornar em breve.");
+    if (fotosPerdidas) notificar("As fotos não puderam ser anexadas desta vez. Envie-as pelo WhatsApp da CAP Consultoria.", "aviso");
   } catch (err) {
     notificar("Erro ao enviar solicitação: " + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = rotulo;
+    byId("btn-cancelar-solicitacao").disabled = false;
   }
 });
 
@@ -4942,9 +5378,17 @@ function abrirSolicitacaoCliente() {
   byId("solicitacao-titulo").value = "";
   byId("solicitacao-descricao").value = "";
   byId("solicitacao-objetivo").value = "";
-  byId("solicitacao-prioridade").value = "media";
   byId("solicitacao-data").value = "";
+  byId("sol-topico-novo").value = "";
+  byId("sol-nota").textContent = "";
+  const media = document.querySelector('input[name="sol-prioridade"][value="media"]');
+  if (media) media.checked = true;
+  solTopicos = [];
+  renderizarTopicosSol();
+  limparFotosSol();
+  atualizarContadoresSol();
   byId("modal-solicitacao").style.display = "flex";
+  setTimeout(() => byId("solicitacao-titulo").focus(), 60);
 }
 function acaoPrincipal() {
   const secao = document.querySelector("#conteudo .pagina");
